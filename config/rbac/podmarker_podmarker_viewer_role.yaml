@@ -1,0 +1,27 @@
+# permissions for end users to view podmarkers.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: podmarker-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: kube-stack
+    app.kubernetes.io/part-of: kube-stack
+    app.kubernetes.io/managed-by: kustomize
+  name: podmarker-viewer-role
+rules:
+- apiGroups:
+  - podmarker.kube-stack.me
+  resources:
+  - podmarkers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - podmarker.kube-stack.me
+  resources:
+  - podmarkers/status
+  verbs:
+  - get

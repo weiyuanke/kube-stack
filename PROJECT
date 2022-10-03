@@ -1,0 +1,17 @@
+domain: kube-stack.me
+layout:
+- go.kubebuilder.io/v3
+multigroup: true
+projectName: kube-stack
+repo: kube-stack.me
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: kube-stack.me
+  group: podmarker
+  kind: PodMarker
+  path: kube-stack.me/apis/podmarker/v1
+  version: v1
+version: "3"
