@@ -31,7 +31,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	centralprobev1 "kube-stack.me/apis/centralprobe/v1"
 	podmarkerv1 "kube-stack.me/apis/podmarker/v1"
+	centralprobecontrollers "kube-stack.me/controllers/centralprobe"
+	corecontrollers "kube-stack.me/controllers/core"
 	podmarkercontrollers "kube-stack.me/controllers/podmarker"
 	//+kubebuilder:scaffold:imports
 )
@@ -45,6 +48,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(podmarkerv1.AddToScheme(scheme))
+	utilruntime.Must(centralprobev1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -94,6 +98,21 @@ func main() {
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "PodMarker")
+		os.Exit(1)
+	}
+	if err = (&centralprobecontrollers.CentralProbeReconciler{
+		Client:   mgr.GetClient(),
+		Scheme:   mgr.GetScheme(),
+		Recorder: mgr.GetEventRecorderFor("CentralProbeReconciler"),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "CentralProbe")
+		os.Exit(1)
+	}
+	if err = (&corecontrollers.PodReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Pod")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

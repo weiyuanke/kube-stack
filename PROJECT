@@ -14,4 +14,18 @@ resources:
   kind: PodMarker
   path: kube-stack.me/apis/podmarker/v1
   version: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: kube-stack.me
+  group: centralprobe
+  kind: CentralProbe
+  path: kube-stack.me/apis/centralprobe/v1
+  version: v1
+- controller: true
+  group: core
+  kind: Pod
+  path: k8s.io/api/core/v1
+  version: v1
 version: "3"

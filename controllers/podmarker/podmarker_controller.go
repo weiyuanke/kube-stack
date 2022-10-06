@@ -74,7 +74,9 @@ func (r *PodMarkerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
-	llog.Info("Reconcile", "namespace", req.Namespace, "number of podmarkers", len(podMarkers.Items))
+	if len(podMarkers.Items) > 0 {
+		llog.Info("Reconcile", "namespace", req.Namespace, "number of podmarkers", len(podMarkers.Items))
+	}
 
 	hasError := false
 	for _, pm := range podMarkers.Items {
