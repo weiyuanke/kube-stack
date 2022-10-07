@@ -27,9 +27,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	podwebhook "kube-stack.me/webhooks/pods"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	centralprobev1 "kube-stack.me/apis/centralprobe/v1"
 	podmarkerv1 "kube-stack.me/apis/podmarker/v1"
@@ -55,12 +57,16 @@ func init() {
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
+	var leaderElectionNamespace string
+	var webhookCertDir string
 	var probeAddr string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
-	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
+	flag.BoolVar(&enableLeaderElection, "leader-elect", true,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.StringVar(&leaderElectionNamespace, "leader-election-namespace", "kube-system", "leader election namespace")
+	flag.StringVar(&webhookCertDir, "webhook-cert-directory", ".", "webhook cert directory: tls.crt/tls.key")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -70,12 +76,14 @@ func main() {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
-		Port:                   9443,
-		HealthProbeBindAddress: probeAddr,
-		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "4b2f493f.kube-stack.me",
+		Scheme:                  scheme,
+		MetricsBindAddress:      metricsAddr,
+		Port:                    9443,
+		HealthProbeBindAddress:  probeAddr,
+		LeaderElection:          enableLeaderElection,
+		LeaderElectionNamespace: leaderElectionNamespace,
+		CertDir:                 webhookCertDir,
+		LeaderElectionID:        "4b2f493f.kube-stack.me",
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
 		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
@@ -125,6 +133,16 @@ func main() {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
+
+	// Setup webhooks
+	setupLog.Info("setting up webhook server")
+	hookServer := mgr.GetWebhookServer()
+
+	setupLog.Info("registering webhooks to the webhook server")
+	hookServer.Register(
+		"/mutate-v1-pod", &webhook.Admission{Handler: &podwebhook.PodMutate{Client: mgr.GetClient()}})
+	hookServer.Register(
+		"/validate-v1-pod", &webhook.Admission{Handler: &podwebhook.PodValidate{Client: mgr.GetClient()}})
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {

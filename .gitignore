@@ -23,4 +23,6 @@ Dockerfile.cross
 .idea
 *.swp
 *.swo
+*.key
+*.crt
 *~
