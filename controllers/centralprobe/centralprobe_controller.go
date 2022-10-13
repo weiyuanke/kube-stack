@@ -217,8 +217,8 @@ func (r *CentralProbeReconciler) processCentralProbe(ctx context.Context, cp *ce
 	for name := range cp.Status.ProbeStatuses {
 		if !podNameSet.Has(name) {
 			changed = true
-			delete(cp.Status.ProbeStatuses, name)
 			proberManager.RemovePod(centralprobev1.ProbeStatustoPod(cp.Status.ProbeStatuses[name]))
+			delete(cp.Status.ProbeStatuses, name)
 			llog.Info("ProbeStatuses, remove pod...", "podName", name)
 		}
 	}
