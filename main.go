@@ -18,15 +18,19 @@ package main
 
 import (
 	"flag"
+	"log"
+	"net/http"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"kube-stack.me/pkg/apiserverslo"
 	podwebhook "kube-stack.me/webhooks/pods"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -60,6 +64,9 @@ func main() {
 	var leaderElectionNamespace string
 	var webhookCertDir string
 	var probeAddr string
+	var sloMod bool
+
+	flag.BoolVar(&sloMod, "slo-mode", false, "slo mode")
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
@@ -71,6 +78,7 @@ func main() {
 		Development: true,
 	}
 	opts.BindFlags(flag.CommandLine)
+	apiserverslo.BindFlags(flag.CommandLine)
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
@@ -79,6 +87,13 @@ func main() {
 	config.QPS = 500
 	config.Burst = 500
 	config.UserAgent = "kube-stack"
+	//config.AcceptContentTypes = "application/vnd.kubernetes.protobuf,application/json"
+
+	if sloMod {
+		apiserverslo.StartWatchSLO(config)
+		http.Handle("/metrics", promhttp.Handler())
+		log.Fatal(http.ListenAndServe(":8080", nil))
+	}
 
 	mgr, err := ctrl.NewManager(config, ctrl.Options{
 		Scheme:                  scheme,
