@@ -25,7 +25,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -39,9 +39,9 @@ import (
 )
 
 var (
-	llog logr.Logger = ctrl.Log.WithName("watch.go")
-	unconfirmedts = sets.NewString()
-	targetPodName string
+	llog            logr.Logger = ctrl.Log.WithName("watch.go")
+	unconfirmedts               = sets.NewString()
+	targetPodName   string
 	targetNamespace string
 )
 
@@ -93,7 +93,7 @@ func checkEventDelay(clientSet *kubernetes.Clientset) {
 				unconfirmedTsMetrics.Set(float64(unconfirmedts.Len()))
 				tsMil, _ := strconv.ParseInt(pod.Labels[labelKey], 10, 64)
 				watchEventDelayMetrics.WithLabelValues("pods").Observe(float64(time.Now().UnixMilli() - tsMil))
-				llog.Info("Watch Delay", "ms", time.Now().UnixMilli() - tsMil, "# left", unconfirmedts.Len(), "rv", pod.ResourceVersion, "ts", pod.Labels[labelKey])
+				llog.Info("Watch Delay", "ms", time.Now().UnixMilli()-tsMil, "nack#", unconfirmedts.Len(), "rv", pod.ResourceVersion, "ts", pod.Labels[labelKey])
 			}
 		}
 	}, backoffManager, true, make(<-chan struct{}))
@@ -107,25 +107,25 @@ func cleanTimestamp() {
 				unconfirmedts.Delete(ts)
 				continue
 			}
-			if time.Now().UnixMilli() - tsMil > time.Second.Milliseconds() * 3600 {
+			if time.Now().UnixMilli()-tsMil > time.Second.Milliseconds()*3600 {
 				unconfirmedts.Delete(ts)
 			}
 			unconfirmedTsMetrics.Set(float64(unconfirmedts.Len()))
 		}
-	}, time.Second * 60, make(<-chan struct{}))
+	}, time.Second*60, make(<-chan struct{}))
 }
 
 func updatePodPeriodically(clientSet *kubernetes.Clientset) {
 	wait.Until(func() {
 		timeStamp := time.Now().UnixMilli()
 		patchData := fmt.Sprintf(`{"metadata":{"labels":{"%s":"%d"}}}`, labelKey, timeStamp)
-		_, err := clientSet.CoreV1().Pods(targetNamespace).Patch(context.TODO(), targetPodName, types.MergePatchType, []byte(patchData), v1.PatchOptions{})
+		unconfirmedts.Insert(fmt.Sprintf("%d", timeStamp))
+		unconfirmedTsMetrics.Set(float64(unconfirmedts.Len()))
+		pod, err := clientSet.CoreV1().Pods(targetNamespace).Patch(context.TODO(), targetPodName, types.MergePatchType, []byte(patchData), v1.PatchOptions{})
 		if err != nil {
 			llog.Error(err, "patch pod err")
 			return
 		}
-		unconfirmedts.Insert(fmt.Sprintf("%d", timeStamp))
-		unconfirmedTsMetrics.Set(float64(unconfirmedts.Len()))
-		llog.Info("updatePodPeriodically", "ns", targetNamespace, "name", targetPodName, "tsMil", timeStamp, "nack#", unconfirmedts.Len())
-	}, time.Second * 10, make(<-chan struct{}))
+		llog.Info("updatePodPeriodically", "rv", pod.ResourceVersion, "ts", timeStamp, "nack#", unconfirmedts.Len())
+	}, time.Second*10, make(<-chan struct{}))
 }
