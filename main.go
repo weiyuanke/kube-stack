@@ -87,7 +87,7 @@ func main() {
 	config.QPS = 500
 	config.Burst = 500
 	config.UserAgent = "kube-stack"
-	//config.AcceptContentTypes = "application/vnd.kubernetes.protobuf,application/json"
+	config.AcceptContentTypes = "application/vnd.kubernetes.protobuf,application/json"
 
 	if sloMod {
 		apiserverslo.StartWatchSLO(config)
