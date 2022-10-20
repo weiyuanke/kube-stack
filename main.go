@@ -92,7 +92,7 @@ func main() {
 	if sloMod {
 		apiserverslo.StartWatchSLO(config)
 		http.Handle("/metrics", promhttp.Handler())
-		log.Fatal(http.ListenAndServe(":8080", nil))
+		log.Fatal(http.ListenAndServe(metricsAddr, nil))
 	}
 
 	mgr, err := ctrl.NewManager(config, ctrl.Options{
