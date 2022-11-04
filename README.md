@@ -16,11 +16,11 @@ kubectl apply -f config/samples/
 ```
 
 2. Build and push your image to the location specified by `IMG`:
-	
+
 ```sh
 make docker-build docker-push IMG=<some-registry>/kube-stack:tag
 ```
-	
+
 3. Deploy the controller to the cluster with the image specified by `IMG`:
 
 ```sh
@@ -47,8 +47,24 @@ make undeploy
 ### How it works
 This project aims to follow the Kubernetes [Operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/)
 
-It uses [Controllers](https://kubernetes.io/docs/concepts/architecture/controller/) 
-which provides a reconcile function responsible for synchronizing resources untile the desired state is reached on the cluster 
+It uses [Controllers](https://kubernetes.io/docs/concepts/architecture/controller/)
+which provides a reconcile function responsible for synchronizing resources untile the desired state is reached on the cluster
+
+### apiserver性能探测
+list&watch集群的全量pod，定期给目标pod打patch，监测watch延迟以及list-all的延迟；
+```
+$cd kube-stack
+$go run main.go -slo-mode=true -kubeconfig ~/.kube/config -target-namespace=default -target-pod-name=kube-stack-target-pod
+1.667539733941164e+09	INFO	watch.go	list all pods	{"time cost": "16.08025ms"}
+1.66753973394863e+09	INFO	watch.go	updatePodPeriodically	{"rv": "1818", "ts": 1667539733925, "nack#": 1}
+1.667539734009155e+09	INFO	watch.go	Watch Delay	{"ms": 84, "nack#": 0, "rv": "1818", "ts": "1667539733925"}
+1.66753974395995e+09	INFO	watch.go	updatePodPeriodically	{"rv": "1831", "ts": 1667539743949, "nack#": 1}
+1.6675397439599621e+09	INFO	watch.go	Watch Delay	{"ms": 10, "nack#": 0, "rv": "1831", "ts": "1667539743949"}
+```
+产出指标有:
+* watch_event_delay_ms
+* list_all_resource_duration_ms
+* watch_event_recv_total
 
 ### Test It Out
 1. Install the CRDs into the cluster:
@@ -91,4 +107,3 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-
