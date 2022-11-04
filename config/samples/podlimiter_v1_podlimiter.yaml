@@ -1,0 +1,16 @@
+apiVersion: podlimiter.kube-stack.me/v1
+kind: Podlimiter
+metadata:
+  labels:
+    app.kubernetes.io/name: podlimiter
+    app.kubernetes.io/instance: podlimiter-sample
+    app.kubernetes.io/part-of: kube-stack
+    app.kuberentes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: kube-stack
+  name: podlimiter-sample
+spec:
+  rules:
+  - name: test
+    labelSelector: ""
+    fieldSelector: "nodeName=docker-desktop"
+    threshhold: 10

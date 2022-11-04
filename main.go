@@ -30,17 +30,20 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	"kube-stack.me/pkg/apiserverslo"
-	podwebhook "kube-stack.me/webhooks/pods"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	"kube-stack.me/pkg/apiserverslo"
+	podwebhook "kube-stack.me/webhooks/pods"
+
 	centralprobev1 "kube-stack.me/apis/centralprobe/v1"
+	podlimiterv1 "kube-stack.me/apis/podlimiter/v1"
 	podmarkerv1 "kube-stack.me/apis/podmarker/v1"
 	centralprobecontrollers "kube-stack.me/controllers/centralprobe"
 	corecontrollers "kube-stack.me/controllers/core"
+	podlimitercontrollers "kube-stack.me/controllers/podlimiter"
 	podmarkercontrollers "kube-stack.me/controllers/podmarker"
 	//+kubebuilder:scaffold:imports
 )
@@ -55,6 +58,7 @@ func init() {
 
 	utilruntime.Must(podmarkerv1.AddToScheme(scheme))
 	utilruntime.Must(centralprobev1.AddToScheme(scheme))
+	utilruntime.Must(podlimiterv1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -121,6 +125,9 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Add index for Podlimiter
+	podlimitercontrollers.AddIndex(mgr)
+
 	if err = (&podmarkercontrollers.PodMarkerReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
@@ -141,6 +148,13 @@ func main() {
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Pod")
+		os.Exit(1)
+	}
+	if err = (&podlimitercontrollers.PodlimiterReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Podlimiter")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

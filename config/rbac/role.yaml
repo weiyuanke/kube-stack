@@ -67,6 +67,32 @@ rules:
   - patch
   - update
 - apiGroups:
+  - podlimiter.kube-stack.me
+  resources:
+  - podlimiters
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - podlimiter.kube-stack.me
+  resources:
+  - podlimiters/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - podlimiter.kube-stack.me
+  resources:
+  - podlimiters/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
   - podmarker.kube-stack.me
   resources:
   - podmarkers
