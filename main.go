@@ -65,6 +65,7 @@ func init() {
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
+	var enableWebhook bool
 	var leaderElectionNamespace string
 	var webhookCertDir string
 	var probeAddr string
@@ -78,6 +79,7 @@ func main() {
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.StringVar(&leaderElectionNamespace, "leader-election-namespace", "kube-system", "leader election namespace")
 	flag.StringVar(&webhookCertDir, "webhook-cert-directory", ".", "webhook cert directory: tls.crt/tls.key")
+	flag.BoolVar(&enableWebhook, "enable-webhook", false, "enable webhook")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -169,14 +171,16 @@ func main() {
 	apiserverslo.StartWatchSLO(config)
 
 	// Setup webhooks
-	setupLog.Info("setting up webhook server")
-	hookServer := mgr.GetWebhookServer()
+	if enableWebhook {
+		setupLog.Info("setting up webhook server")
+		hookServer := mgr.GetWebhookServer()
 
-	setupLog.Info("registering webhooks to the webhook server")
-	hookServer.Register(
-		"/mutate-v1-pod", &webhook.Admission{Handler: &podwebhook.PodMutate{Client: mgr.GetClient()}})
-	hookServer.Register(
-		"/validate-v1-pod", &webhook.Admission{Handler: &podwebhook.PodValidate{Client: mgr.GetClient()}})
+		setupLog.Info("registering webhooks to the webhook server")
+		hookServer.Register(
+			"/mutate-v1-pod", &webhook.Admission{Handler: &podwebhook.PodMutate{Client: mgr.GetClient()}})
+		hookServer.Register(
+			"/validate-v1-pod", &webhook.Admission{Handler: &podwebhook.PodValidate{Client: mgr.GetClient()}})
+	}
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
