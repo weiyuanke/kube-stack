@@ -29,6 +29,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -94,6 +95,12 @@ func main() {
 	config.Burst = 500
 	config.UserAgent = "kube-stack"
 	config.AcceptContentTypes = "application/vnd.kubernetes.protobuf,application/json"
+
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		setupLog.Error(err, "unable to gen clientset")
+		os.Exit(1)
+	}
 
 	if sloMod {
 		apiserverslo.StartWatchSLO(config)
@@ -177,9 +184,17 @@ func main() {
 
 		setupLog.Info("registering webhooks to the webhook server")
 		hookServer.Register(
-			"/mutate-v1-pod", &webhook.Admission{Handler: &podwebhook.PodMutate{Client: mgr.GetClient()}})
+			"/mutate-v1-pod",
+			&webhook.Admission{
+				Handler: &podwebhook.PodMutate{Client: mgr.GetClient(), ClientSet: clientset},
+			},
+		)
 		hookServer.Register(
-			"/validate-v1-pod", &webhook.Admission{Handler: &podwebhook.PodValidate{Client: mgr.GetClient()}})
+			"/validate-v1-pod",
+			&webhook.Admission{
+				Handler: &podwebhook.PodValidate{Client: mgr.GetClient(), ClientSet: clientset},
+			},
+		)
 	}
 
 	setupLog.Info("starting manager")

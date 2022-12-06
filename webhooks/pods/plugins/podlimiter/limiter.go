@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -21,6 +22,10 @@ func (p *PodlimiterPlugin) Name() string {
 }
 
 func (p *PodlimiterPlugin) Validate(ctx context.Context, obj *corev1.Pod, req admission.Request, c client.Client, clientSet kubernetes.Interface) (bool, string, error) {
+	if admissionv1.Create != req.AdmissionRequest.Operation {
+		return true, "", nil
+	}
+
 	var limiters podlimiterv1.PodlimiterList
 	if err := c.List(ctx, &limiters); err != nil {
 		return false, "list podlimiter err", err
