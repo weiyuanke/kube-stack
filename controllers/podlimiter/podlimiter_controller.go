@@ -79,6 +79,11 @@ func (r *PodlimiterReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *PodlimiterReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	if err := AddIndex(mgr); err != nil {
+		llog.Error(err, "AddIndex err")
+		return nil
+	}
+
 	controller, err := utils.NewNonLeaderController("pod_limiter_controller", mgr, controller.Options{
 		Reconciler:              r,
 		MaxConcurrentReconciles: 2,
@@ -133,7 +138,7 @@ func IndexName(pl *podlimiterv1.Podlimiter, rule *podlimiterv1.LimitRule) string
 	return fmt.Sprintf("%s-%s", pl.Name, rule.Name)
 }
 
-func AddIndex(mgr ctrl.Manager) {
+func AddIndex(mgr ctrl.Manager) error {
 	var limiters podlimiterv1.PodlimiterList
 
 	config := mgr.GetConfig()
@@ -143,12 +148,12 @@ func AddIndex(mgr ctrl.Manager) {
 	restClient, err := rest.RESTClientFor(config)
 	if err != nil {
 		llog.Error(err, "rest.RESTClientFor error")
-		os.Exit(1)
+		return err
 	}
 
 	if err := restClient.Get().Resource("podlimiters").Do(context.TODO()).Into(&limiters); err != nil {
 		llog.Error(err, "list Podlimiter error")
-		os.Exit(1)
+		return err
 	}
 
 	for i := range limiters.Items {
@@ -168,4 +173,6 @@ func AddIndex(mgr ctrl.Manager) {
 			}
 		}
 	}
+
+	return nil
 }

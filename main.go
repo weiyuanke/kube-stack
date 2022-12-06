@@ -125,9 +125,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Add index for Podlimiter
-	podlimitercontrollers.AddIndex(mgr)
-
 	if err = (&podmarkercontrollers.PodMarkerReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
@@ -167,6 +164,9 @@ func main() {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
+
+	setupLog.Info("starting Pod WatchDealy monitoring")
+	apiserverslo.StartWatchSLO(config)
 
 	// Setup webhooks
 	setupLog.Info("setting up webhook server")

@@ -50,8 +50,8 @@ const (
 )
 
 func BindFlags(fs *flag.FlagSet) {
-	fs.StringVar(&targetPodName, "target-pod-name", "", "specify target pod name")
-	fs.StringVar(&targetNamespace, "target-namespace", "", "specify target namespace")
+	fs.StringVar(&targetPodName, "target-pod-name", "kube-stack-target-pod", "specify target pod name")
+	fs.StringVar(&targetNamespace, "target-namespace", "kube-system", "specify target namespace")
 }
 
 func StartWatchSLO(config *rest.Config) {

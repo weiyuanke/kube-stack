@@ -18,6 +18,7 @@ package apiserverslo
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
 
 var (
@@ -51,8 +52,8 @@ var (
 )
 
 func init() {
-	prometheus.MustRegister(unconfirmedTsMetrics)
-	prometheus.MustRegister(watchEventDelayMetrics)
-	prometheus.MustRegister(listAllDurationMetrics)
-	prometheus.MustRegister(watchEventCounter)
+	metrics.Registry.MustRegister(unconfirmedTsMetrics)
+	metrics.Registry.MustRegister(watchEventDelayMetrics)
+	metrics.Registry.MustRegister(listAllDurationMetrics)
+	metrics.Registry.MustRegister(watchEventCounter)
 }

@@ -18,13 +18,51 @@ package core
 
 import (
 	"context"
+	"time"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/cache"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	"kube-stack.me/pkg/pod"
+	"kube-stack.me/pkg/utils"
 )
+
+var (
+	llog                    logr.Logger = ctrl.Log.WithName("PodReconciler")
+	podsMap                 cache.ThreadSafeStore
+	namespacedNameIndexName = "NamespacedNameIndexName"
+)
+
+func init() {
+	indexers := cache.Indexers{
+		namespacedNameIndexName: func(obj interface{}) ([]string, error) {
+			return []string{obj.(*pod.PodState).NamespacedName.String()}, nil
+		},
+	}
+	podsMap = cache.NewThreadSafeStore(indexers, cache.Indices{})
+
+	ticker := time.NewTicker(30 * time.Second)
+	go func() {
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				for _, v := range podsMap.List() {
+					if v.(*pod.PodState).Stopped {
+						podsMap.Delete(string(v.(*pod.PodState).Pod.UID))
+					}
+				}
+				podsMapSize.Set(float64(len(podsMap.ListKeys())))
+			}
+		}
+	}()
+}
 
 // PodReconciler reconciles a Pod object
 type PodReconciler struct {
@@ -49,6 +87,46 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	_ = log.FromContext(ctx)
 
 	// TODO(user): your logic here
+	var po *corev1.Pod = &corev1.Pod{}
+	if err := r.Get(ctx, req.NamespacedName, po); err != nil {
+		if errors.IsNotFound(err) {
+			po = nil
+		} else {
+			return ctrl.Result{}, err
+		}
+	}
+
+	if po != nil {
+		v, exists := podsMap.Get(string(po.UID))
+		if exists {
+			v.(*pod.PodState).ProcessEvent(po)
+		} else {
+			ps := pod.NewPodState(req.NamespacedName)
+			ps.StartDispatching()
+			podsMap.Add(string(po.UID), ps)
+			ps.ProcessEvent(po)
+		}
+	} else {
+		pss, err := podsMap.ByIndex(namespacedNameIndexName, req.NamespacedName.String())
+		if err != nil || len(pss) <= 0 {
+			llog.Info("No Pod by Index", "indexValue", req.NamespacedName.String())
+			return ctrl.Result{}, nil
+		}
+
+		if len(pss) == 1 {
+			pss[0].(*pod.PodState).ProcessEvent(po)
+		} else {
+			utils.SortPodStates(pss)
+			for i := range pss {
+				if i == 0 {
+					pss[0].(*pod.PodState).ProcessEvent(po)
+				} else {
+					pss[i].(*pod.PodState).StopDispatching()
+					podsMap.Delete(string(pss[i].(*pod.PodState).Pod.UID))
+				}
+			}
+		}
+	}
 
 	return ctrl.Result{}, nil
 }
