@@ -22,6 +22,7 @@ import (
 	"net/http"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
@@ -29,9 +30,14 @@ import (
 // +kubebuilder:webhook:admissionReviewVersions=v1,sideEffects=None,path=/mutate-v1-pod,mutating=true,failurePolicy=fail,groups="",resources=pods,verbs=create;update,versions=v1,name=mpod.kb.io
 
 type PodMutate struct {
-	Client  client.Client
-	decoder *admission.Decoder
+	Client    client.Client
+	ClientSet kubernetes.Interface
+	decoder   *admission.Decoder
 }
+
+var (
+	mutatedPlugins []MutatePlugin = []MutatePlugin{}
+)
 
 func (a *PodMutate) Handle(ctx context.Context, req admission.Request) admission.Response {
 	pod := &corev1.Pod{}
@@ -42,6 +48,11 @@ func (a *PodMutate) Handle(ctx context.Context, req admission.Request) admission
 	}
 
 	// TODO(user): your logic here
+	for _, f := range mutatedPlugins {
+		if err := f.Admission(ctx, pod, req, a.Client, a.ClientSet); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+	}
 
 	marshaledPod, err := json.Marshal(pod)
 	if err != nil {

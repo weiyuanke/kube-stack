@@ -21,16 +21,26 @@ import (
 	"net/http"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	podlimiter "kube-stack.me/webhooks/pods/plugins/podlimiter"
 )
 
 // +kubebuilder:webhook:admissionReviewVersions=v1,sideEffects=None,path=/validate-v1-pod,mutating=false,failurePolicy=fail,groups="",resources=pods,verbs=create;update,versions=v1,name=vpod.kb.io
 
 type PodValidate struct {
-	Client  client.Client
-	decoder *admission.Decoder
+	Client    client.Client
+	ClientSet kubernetes.Interface
+	decoder   *admission.Decoder
 }
+
+var (
+	validatePlugins []ValidatePlugin = []ValidatePlugin{
+		&podlimiter.PodlimiterPlugin{},
+	}
+)
 
 func (v *PodValidate) Handle(ctx context.Context, req admission.Request) admission.Response {
 	pod := &corev1.Pod{}
@@ -41,6 +51,15 @@ func (v *PodValidate) Handle(ctx context.Context, req admission.Request) admissi
 	}
 
 	// TODO(user): your logic here
+	for _, f := range validatePlugins {
+		allow, msg, err := f.Validate(ctx, pod, req, v.Client, v.ClientSet)
+		if err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+		if !allow {
+			return admission.Denied(msg)
+		}
+	}
 
 	return admission.Allowed("")
 }
