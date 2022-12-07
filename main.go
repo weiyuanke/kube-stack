@@ -21,6 +21,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -32,12 +33,10 @@ import (
 	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
-
-	"kube-stack.me/pkg/apiserverslo"
-	podwebhook "kube-stack.me/webhooks/pods"
 
 	centralprobev1 "kube-stack.me/apis/centralprobe/v1"
 	podlimiterv1 "kube-stack.me/apis/podlimiter/v1"
@@ -46,12 +45,15 @@ import (
 	corecontrollers "kube-stack.me/controllers/core"
 	podlimitercontrollers "kube-stack.me/controllers/podlimiter"
 	podmarkercontrollers "kube-stack.me/controllers/podmarker"
+	"kube-stack.me/pkg/apiserverslo"
+	podwebhook "kube-stack.me/webhooks/pods"
 	//+kubebuilder:scaffold:imports
 )
 
 var (
-	scheme   = runtime.NewScheme()
-	setupLog = ctrl.Log.WithName("setup")
+	scheme           = runtime.NewScheme()
+	setupLog         = ctrl.Log.WithName("setup")
+	cacheSyncTimeout = 600 * time.Second
 )
 
 func init() {
@@ -128,6 +130,9 @@ func main() {
 		// if you are doing or is intended to do any operation such as perform cleanups
 		// after the manager stops then its usage might be unsafe.
 		// LeaderElectionReleaseOnCancel: true,
+		Controller: v1alpha1.ControllerConfigurationSpec{
+			CacheSyncTimeout: &cacheSyncTimeout,
+		},
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
