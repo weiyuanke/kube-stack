@@ -41,10 +41,12 @@ import (
 	centralprobev1 "kube-stack.me/apis/centralprobe/v1"
 	podlimiterv1 "kube-stack.me/apis/podlimiter/v1"
 	podmarkerv1 "kube-stack.me/apis/podmarker/v1"
+	slov1beta1 "kube-stack.me/apis/slo/v1beta1"
 	centralprobecontrollers "kube-stack.me/controllers/centralprobe"
 	corecontrollers "kube-stack.me/controllers/core"
 	podlimitercontrollers "kube-stack.me/controllers/podlimiter"
 	podmarkercontrollers "kube-stack.me/controllers/podmarker"
+	slocontrollers "kube-stack.me/controllers/slo"
 	"kube-stack.me/pkg/apiserverslo"
 	podwebhook "kube-stack.me/webhooks/pods"
 	//+kubebuilder:scaffold:imports
@@ -62,6 +64,7 @@ func init() {
 	utilruntime.Must(podmarkerv1.AddToScheme(scheme))
 	utilruntime.Must(centralprobev1.AddToScheme(scheme))
 	utilruntime.Must(podlimiterv1.AddToScheme(scheme))
+	utilruntime.Must(slov1beta1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -166,6 +169,20 @@ func main() {
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Podlimiter")
+		os.Exit(1)
+	}
+	if err = (&slocontrollers.PodSLOReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "PodSLO")
+		os.Exit(1)
+	}
+	if err = (&slocontrollers.ResourceStateTransitionReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ResourceStateTransition")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

@@ -37,4 +37,13 @@ resources:
   kind: Podlimiter
   path: kube-stack.me/apis/podlimiter/v1
   version: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: kube-stack.me
+  group: slo
+  kind: ResourceStateTransition
+  path: kube-stack.me/apis/slo/v1beta1
+  version: v1beta1
 version: "3"

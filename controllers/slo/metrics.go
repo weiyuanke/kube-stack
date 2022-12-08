@@ -1,4 +1,4 @@
-package core
+package slo
 
 import (
 	"github.com/prometheus/client_golang/prometheus"

@@ -70,9 +70,9 @@ func (r *PodlimiterReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	_ = log.FromContext(ctx)
 
 	// TODO(user): your logic here
-	var pods corev1.PodList
-	r.List(context.TODO(), &pods, client.MatchingFields{"podlimiter-sample-test": "true"})
-	llog.Info("", "len", len(pods.Items))
+	// var pods corev1.PodList
+	// r.List(context.TODO(), &pods, client.MatchingFields{"podlimiter-sample-test": "true"})
+	// llog.Info("", "len", len(pods.Items))
 
 	return ctrl.Result{}, nil
 }

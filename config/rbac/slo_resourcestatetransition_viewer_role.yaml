@@ -1,0 +1,27 @@
+# permissions for end users to view resourcestatetransitions.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: resourcestatetransition-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: kube-stack
+    app.kubernetes.io/part-of: kube-stack
+    app.kubernetes.io/managed-by: kustomize
+  name: resourcestatetransition-viewer-role
+rules:
+- apiGroups:
+  - slo.kube-stack.me
+  resources:
+  - resourcestatetransitions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - slo.kube-stack.me
+  resources:
+  - resourcestatetransitions/status
+  verbs:
+  - get

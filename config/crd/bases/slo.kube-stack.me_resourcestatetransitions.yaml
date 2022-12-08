@@ -1,0 +1,264 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.9.2
+  creationTimestamp: null
+  name: resourcestatetransitions.slo.kube-stack.me
+spec:
+  group: slo.kube-stack.me
+  names:
+    kind: ResourceStateTransition
+    listKind: ResourceStateTransitionList
+    plural: resourcestatetransitions
+    singular: resourcestatetransition
+  scope: Namespaced
+  versions:
+  - name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: ResourceStateTransition is the Schema for the resourcestatetransitions
+          API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ResourceStateTransitionSpec defines the desired state of
+              ResourceStateTransition
+            properties:
+              events:
+                items:
+                  description: Event resource event
+                  properties:
+                    matches:
+                      items:
+                        properties:
+                          fieldSelector:
+                            type: string
+                          labelSelector:
+                            description: "The input will cause an error if it does
+                              not follow this form: \n <selector-syntax>         ::=
+                              <requirement> | <requirement> \",\" <selector-syntax>
+                              <requirement>             ::= [!] KEY [ <set-based-restriction>
+                              | <exact-match-restriction> ] <set-based-restriction>
+                              \  ::= \"\" | <inclusion-exclusion> <value-set> <inclusion-exclusion>
+                              \    ::= <inclusion> | <exclusion> <exclusion>               ::=
+                              \"notin\" <inclusion>               ::= \"in\" <value-set>
+                              \              ::= \"(\" <values> \")\" <values>                  ::=
+                              VALUE | VALUE \",\" <values> <exact-match-restriction>
+                              ::= [\"=\"|\"==\"|\"!=\"] VALUE \n KEY is a sequence
+                              of one or more characters following [ DNS_SUBDOMAIN
+                              \"/\" ] DNS_LABEL. Max length is 63 characters. VALUE
+                              is a sequence of zero or more characters \"([A-Za-z0-9_-\\.])\".
+                              Max length is 63 characters. Delimiter is white space:
+                              (' ', '\\t') Example of valid syntax: \n \"x in (foo,,baz),y,z
+                              notin ()\" gjson express can be used in KEY"
+                            type: string
+                          selector:
+                            description: ResourceSelector the resources which will
+                              be selected.
+                            properties:
+                              apiVersion:
+                                description: APIVersion represents the API version
+                                  of the target resources.
+                                type: string
+                              kind:
+                                description: Kind represents the Kind of the target
+                                  resources.
+                                type: string
+                              labelSelector:
+                                description: A label query over a set of resources.
+                                  If name is not empty, labelSelector will be ignored.
+                                properties:
+                                  matchExpressions:
+                                    description: matchExpressions is a list of label
+                                      selector requirements. The requirements are
+                                      ANDed.
+                                    items:
+                                      description: A label selector requirement is
+                                        a selector that contains values, a key, and
+                                        an operator that relates the key and values.
+                                      properties:
+                                        key:
+                                          description: key is the label key that the
+                                            selector applies to.
+                                          type: string
+                                        operator:
+                                          description: operator represents a key's
+                                            relationship to a set of values. Valid
+                                            operators are In, NotIn, Exists and DoesNotExist.
+                                          type: string
+                                        values:
+                                          description: values is an array of string
+                                            values. If the operator is In or NotIn,
+                                            the values array must be non-empty. If
+                                            the operator is Exists or DoesNotExist,
+                                            the values array must be empty. This array
+                                            is replaced during a strategic merge patch.
+                                          items:
+                                            type: string
+                                          type: array
+                                      required:
+                                      - key
+                                      - operator
+                                      type: object
+                                    type: array
+                                  matchLabels:
+                                    additionalProperties:
+                                      type: string
+                                    description: matchLabels is a map of {key,value}
+                                      pairs. A single {key,value} in the matchLabels
+                                      map is equivalent to an element of matchExpressions,
+                                      whose key field is "key", the operator is "In",
+                                      and the values array contains only "value".
+                                      The requirements are ANDed.
+                                    type: object
+                                type: object
+                                x-kubernetes-map-type: atomic
+                              name:
+                                description: Name of the target resource. Default
+                                  is empty, which means selecting all resources.
+                                type: string
+                              namespace:
+                                description: Namespace of the target resource. Default
+                                  is empty, which means inherit from the parent object
+                                  scope.
+                                type: string
+                            required:
+                            - apiVersion
+                            - kind
+                            type: object
+                        required:
+                        - selector
+                        type: object
+                      type: array
+                    name:
+                      type: string
+                  required:
+                  - matches
+                  - name
+                  type: object
+                type: array
+              selector:
+                description: Selector restricts resource types that this StateTransition
+                  config applies to.
+                properties:
+                  apiVersion:
+                    description: APIVersion represents the API version of the target
+                      resources.
+                    type: string
+                  kind:
+                    description: Kind represents the Kind of the target resources.
+                    type: string
+                  labelSelector:
+                    description: A label query over a set of resources. If name is
+                      not empty, labelSelector will be ignored.
+                    properties:
+                      matchExpressions:
+                        description: matchExpressions is a list of label selector
+                          requirements. The requirements are ANDed.
+                        items:
+                          description: A label selector requirement is a selector
+                            that contains values, a key, and an operator that relates
+                            the key and values.
+                          properties:
+                            key:
+                              description: key is the label key that the selector
+                                applies to.
+                              type: string
+                            operator:
+                              description: operator represents a key's relationship
+                                to a set of values. Valid operators are In, NotIn,
+                                Exists and DoesNotExist.
+                              type: string
+                            values:
+                              description: values is an array of string values. If
+                                the operator is In or NotIn, the values array must
+                                be non-empty. If the operator is Exists or DoesNotExist,
+                                the values array must be empty. This array is replaced
+                                during a strategic merge patch.
+                              items:
+                                type: string
+                              type: array
+                          required:
+                          - key
+                          - operator
+                          type: object
+                        type: array
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        description: matchLabels is a map of {key,value} pairs. A
+                          single {key,value} in the matchLabels map is equivalent
+                          to an element of matchExpressions, whose key field is "key",
+                          the operator is "In", and the values array contains only
+                          "value". The requirements are ANDed.
+                        type: object
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  name:
+                    description: Name of the target resource. Default is empty, which
+                      means selecting all resources.
+                    type: string
+                  namespace:
+                    description: Namespace of the target resource. Default is empty,
+                      which means inherit from the parent object scope.
+                    type: string
+                required:
+                - apiVersion
+                - kind
+                type: object
+              states:
+                items:
+                  description: State resource state
+                  properties:
+                    name:
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
+              transitions:
+                items:
+                  description: Transition state transition
+                  properties:
+                    event:
+                      type: string
+                    source:
+                      items:
+                        type: string
+                      type: array
+                    target:
+                      type: string
+                  required:
+                  - event
+                  - source
+                  - target
+                  type: object
+                type: array
+            required:
+            - events
+            - selector
+            - states
+            - transitions
+            type: object
+          status:
+            description: ResourceStateTransitionStatus defines the observed state
+              of ResourceStateTransition
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

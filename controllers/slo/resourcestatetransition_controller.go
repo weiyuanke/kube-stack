@@ -14,43 +14,39 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package core
+package slo
 
 import (
 	"context"
 
-	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	slov1beta1 "kube-stack.me/apis/slo/v1beta1"
 )
 
-var (
-	llog logr.Logger = ctrl.Log.WithName("PodReconciler")
-)
-
-// PodReconciler reconciles a Pod object
-type PodReconciler struct {
+// ResourceStateTransitionReconciler reconciles a ResourceStateTransition object
+type ResourceStateTransitionReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=core,resources=pods/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=core,resources=pods/finalizers,verbs=update
+//+kubebuilder:rbac:groups=slo.kube-stack.me,resources=resourcestatetransitions,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=slo.kube-stack.me,resources=resourcestatetransitions/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=slo.kube-stack.me,resources=resourcestatetransitions/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 // TODO(user): Modify the Reconcile function to compare the state specified by
-// the Pod object against the actual cluster state, and then
+// the ResourceStateTransition object against the actual cluster state, and then
 // perform operations to make the cluster state reflect the state specified by
 // the user.
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.13.0/pkg/reconcile
-func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *ResourceStateTransitionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 
 	// TODO(user): your logic here
@@ -59,8 +55,8 @@ func (r *PodReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *PodReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *ResourceStateTransitionReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&corev1.Pod{}).
+		For(&slov1beta1.ResourceStateTransition{}).
 		Complete(r)
 }

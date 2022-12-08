@@ -1,0 +1,48 @@
+apiVersion: slo.kube-stack.me/v1beta1
+kind: ResourceStateTransition
+metadata:
+  labels:
+    app.kubernetes.io/name: resourcestatetransition
+    app.kubernetes.io/instance: resourcestatetransition-sample
+    app.kubernetes.io/part-of: kube-stack
+    app.kuberentes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: kube-stack
+  name: resourcestatetransition-sample
+spec:
+  selector:
+    apiVersion: v1
+    kind: pod
+  states:
+  - name: BeginState
+  - name: CreatedState
+  - name: ScheduledState
+  - name: ReadyState
+  # events has orders
+  events:
+  - name: CreateEvent
+    matches:
+    - selector:
+        apiVersion: v1
+        kind: pod
+      labelSelector: |
+        metadata.creationTimestamp!=""
+  - name: ScheduleEvent
+    matches:
+    - selector:
+        apiVersion: v1
+        kind: pod
+      fieldSelector: "spec.nodeName!="
+    - selector:
+        apiVersion: v1
+        kind: Event
+      labelSelector: |
+        message="Synced successfully", reason="Synced"
+  transitions:
+  - source:
+    - BeginState
+    target: CreatedState
+    event: CreateEvent
+  - source:
+    - CreatedState
+    target: ScheduledState
+    event: ScheduleEvent
