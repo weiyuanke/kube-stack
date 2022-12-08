@@ -119,6 +119,7 @@ type ResourceStateTransitionStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:resource:scope=Cluster
 
 // ResourceStateTransition is the Schema for the resourcestatetransitions API
 type ResourceStateTransition struct {

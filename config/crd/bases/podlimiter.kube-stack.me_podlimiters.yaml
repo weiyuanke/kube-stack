@@ -13,7 +13,7 @@ spec:
     listKind: PodlimiterList
     plural: podlimiters
     singular: podlimiter
-  scope: Namespaced
+  scope: Cluster
   versions:
   - name: v1
     schema:
@@ -40,6 +40,8 @@ spec:
                   properties:
                     current:
                       type: integer
+                    enabled:
+                      type: boolean
                     fieldSelector:
                       type: string
                     labelSelector:
@@ -49,6 +51,7 @@ spec:
                     threshhold:
                       type: integer
                   required:
+                  - enabled
                   - name
                   - threshhold
                   type: object

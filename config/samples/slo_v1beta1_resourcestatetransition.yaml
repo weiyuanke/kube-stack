@@ -24,6 +24,7 @@ spec:
     - selector:
         apiVersion: v1
         kind: pod
+      # 支持gjon表达式
       labelSelector: |
         metadata.creationTimestamp!=""
   - name: ScheduleEvent

@@ -33,6 +33,9 @@ func (p *PodlimiterPlugin) Validate(ctx context.Context, obj *corev1.Pod, req ad
 
 	for _, limiter := range limiters.Items {
 		for _, rule := range limiter.Spec.Rules {
+			if !rule.Enabled {
+				continue
+			}
 			indexName := podlimiter.IndexName(&limiter, &rule)
 			var pods corev1.PodList
 			err := c.List(ctx, &pods, client.MatchingFields{indexName: podlimiter.Match})

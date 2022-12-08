@@ -40,6 +40,7 @@ type PodlimiterStatus struct {
 type LimitRule struct {
 	Name          string `json:"name"`
 	Threshhold    int    `json:"threshhold"`
+	Enabled       bool   `json:"enabled"`
 	Current       int    `json:"current,omitempty"`
 	LabelSelector string `json:"labelSelector,omitempty"`
 	FieldSelector string `json:"fieldSelector,omitempty"`
@@ -47,6 +48,7 @@ type LimitRule struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:resource:scope=Cluster
 
 // Podlimiter is the Schema for the podlimiters API
 type Podlimiter struct {
