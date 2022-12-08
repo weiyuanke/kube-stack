@@ -206,13 +206,13 @@ func main() {
 
 		setupLog.Info("registering webhooks to the webhook server")
 		hookServer.Register(
-			"/mutate-v1-pod",
+			"/mutating-pod",
 			&webhook.Admission{
 				Handler: &podwebhook.PodMutate{Client: mgr.GetClient(), ClientSet: clientset},
 			},
 		)
 		hookServer.Register(
-			"/validate-v1-pod",
+			"/validating-pod",
 			&webhook.Admission{
 				Handler: &podwebhook.PodValidate{Client: mgr.GetClient(), ClientSet: clientset},
 			},

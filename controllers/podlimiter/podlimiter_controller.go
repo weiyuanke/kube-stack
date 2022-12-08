@@ -18,23 +18,27 @@ package podlimiter
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-	podlimiterv1 "kube-stack.me/apis/podlimiter/v1"
-	"kube-stack.me/pkg/utils"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	podlimiterv1 "kube-stack.me/apis/podlimiter/v1"
+	"kube-stack.me/pkg/utils"
 )
 
 // PodlimiterReconciler reconciles a Podlimiter object
@@ -77,28 +81,6 @@ func (r *PodlimiterReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	return ctrl.Result{}, nil
 }
 
-// SetupWithManager sets up the controller with the Manager.
-func (r *PodlimiterReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	if err := AddIndex(mgr); err != nil {
-		llog.Error(err, "AddIndex err")
-		return nil
-	}
-
-	controller, err := utils.NewNonLeaderController("pod_limiter_controller", mgr, controller.Options{
-		Reconciler:              r,
-		MaxConcurrentReconciles: 2,
-	})
-	if err != nil {
-		return err
-	}
-	mgr.Add(controller)
-	if err := controller.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForObject{}); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // ref kubernetes/pkg/apis/core/v1/conversion.go
 func convertToFieldsSet(pod *corev1.Pod) *fields.Set {
 	return &fields.Set{
@@ -138,7 +120,7 @@ func IndexName(pl *podlimiterv1.Podlimiter, rule *podlimiterv1.LimitRule) string
 	return fmt.Sprintf("%s-%s", pl.Name, rule.Name)
 }
 
-func AddIndex(mgr ctrl.Manager) error {
+func addIndex(mgr ctrl.Manager) error {
 	var limiters podlimiterv1.PodlimiterList
 
 	config := mgr.GetConfig()
@@ -173,6 +155,56 @@ func AddIndex(mgr ctrl.Manager) error {
 			}
 		}
 	}
+
+	return nil
+}
+
+func refreshLimiterRuleState(mgr ctrl.Manager) {
+	if success := mgr.GetCache().WaitForCacheSync(context.TODO()); !success {
+		llog.Error(errors.New("refreshLimiterRuleState could not sync cache"), "")
+		os.Exit(1)
+	}
+
+	wait.Until(func() {
+		var podlimiters podlimiterv1.PodlimiterList
+		if err := mgr.GetClient().List(context.TODO(), &podlimiters); err != nil {
+			llog.Error(err, "PodlimiterList err")
+			return
+		}
+
+		for _, pl := range podlimiters.Items {
+			for _, rule := range pl.Spec.Rules {
+				var pods corev1.PodList
+				indexName := IndexName(&pl, &rule)
+				if err := mgr.GetClient().List(context.TODO(), &pods, client.MatchingFields{indexName: Match}); err == nil {
+					podlimiterRuleCurrentNum.WithLabelValues(pl.Name, rule.Name).Set(float64(len(pods.Items)))
+				}
+			}
+		}
+	}, time.Second*10, make(<-chan struct{}))
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *PodlimiterReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	if err := addIndex(mgr); err != nil {
+		llog.Error(err, "AddIndex err")
+		return nil
+	}
+
+	controller, err := utils.NewNonLeaderController("pod_limiter_controller", mgr, controller.Options{
+		Reconciler:              r,
+		MaxConcurrentReconciles: 2,
+	})
+	if err != nil {
+		return err
+	}
+	mgr.Add(controller)
+	if err := controller.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForObject{}); err != nil {
+		return err
+	}
+
+	// start collect limiter rule status
+	go refreshLimiterRuleState(mgr)
 
 	return nil
 }

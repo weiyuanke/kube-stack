@@ -10,7 +10,7 @@ metadata:
   name: podlimiter-sample
 spec:
   rules:
-  - name: test
+  - name: pending
     labelSelector: ""
-    fieldSelector: "nodeName=docker-desktop"
+    fieldSelector: "spec.nodeName=="
     threshhold: 10
