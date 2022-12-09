@@ -14,7 +14,9 @@ spec:
     matchLabels:
       app: vm
   addLabels:
-    podIP: "{.status.podIP}"
+  - key: testKey
+    valueFromPod: "{.status.podIP}"
+    valueFromNode: "{.status.podIP}"
   markLabel:
     name: testKey
     values:

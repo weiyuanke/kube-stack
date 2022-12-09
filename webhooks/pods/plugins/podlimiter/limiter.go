@@ -6,6 +6,7 @@ import (
 
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -36,6 +37,12 @@ func (p *PodlimiterPlugin) Validate(ctx context.Context, obj *corev1.Pod, req ad
 			if !rule.Enabled {
 				continue
 			}
+
+			labelSelect, fieldSelector := podlimiter.ExtractFromRule(rule)
+			if !labelSelect.Matches(labels.Set(obj.GetLabels())) || !fieldSelector.Matches(podlimiter.ConvertToFieldsSet(obj)) {
+				continue
+			}
+
 			indexName := podlimiter.IndexName(&limiter, &rule)
 			var pods corev1.PodList
 			err := c.List(ctx, &pods, client.MatchingFields{indexName: podlimiter.Match})

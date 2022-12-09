@@ -36,9 +36,18 @@ spec:
             description: PodMarkerSpec defines the desired state of PodMarker
             properties:
               addLabels:
-                additionalProperties:
-                  type: string
-                type: object
+                items:
+                  properties:
+                    key:
+                      type: string
+                    valueFromNode:
+                      type: string
+                    valueFromPod:
+                      type: string
+                  required:
+                  - key
+                  type: object
+                type: array
               markLabel:
                 properties:
                   name:

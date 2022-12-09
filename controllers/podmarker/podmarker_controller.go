@@ -111,11 +111,24 @@ func (r *PodMarkerReconciler) processPodMarker(ctx context.Context, pm *podmarke
 
 	for i := range podList {
 		changed := false
-		for key, val := range pm.Spec.AddLabels {
-			v := extractValueByJsonPath(podList[i], val)
-			if podList[i].Labels[key] != v {
-				podList[i].Labels[key] = v
-				changed = true
+		for _, val := range pm.Spec.AddLabels {
+			if val.ValueFromPod != "" {
+				v := extractValueByJsonPath(podList[i], val.ValueFromPod)
+				if podList[i].Labels[val.Key] != v {
+					podList[i].Labels[val.Key] = v
+					changed = true
+				}
+			}
+
+			if val.ValueFromNode != "" && podList[i].Spec.NodeName != "" {
+				var node corev1.Node
+				if err := r.Get(ctx, types.NamespacedName{Name: podList[i].Spec.NodeName}, &node); err != nil {
+					v := extractValueByJsonPath(&node, val.ValueFromNode)
+					if podList[i].Labels[val.Key] != v {
+						podList[i].Labels[val.Key] = v
+						changed = true
+					}
+				}
 			}
 		}
 		if changed {
@@ -158,7 +171,7 @@ func (r *PodMarkerReconciler) processPodMarker(ctx context.Context, pm *podmarke
 	return nil
 }
 
-func extractValueByJsonPath(pod *corev1.Pod, jsonPathExpr string) string {
+func extractValueByJsonPath(pod client.Object, jsonPathExpr string) string {
 	var (
 		err    error
 		unstct map[string]interface{}

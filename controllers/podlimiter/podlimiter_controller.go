@@ -82,7 +82,7 @@ func (r *PodlimiterReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 }
 
 // ref kubernetes/pkg/apis/core/v1/conversion.go
-func convertToFieldsSet(pod *corev1.Pod) *fields.Set {
+func ConvertToFieldsSet(pod *corev1.Pod) *fields.Set {
 	return &fields.Set{
 		"metadata.name":            pod.Name,
 		"metadata.namespace":       pod.Namespace,
@@ -96,7 +96,7 @@ func convertToFieldsSet(pod *corev1.Pod) *fields.Set {
 	}
 }
 
-func extractFromRule(rule podlimiterv1.LimitRule) (labelSelector labels.Selector, fieldSelector fields.Selector) {
+func ExtractFromRule(rule podlimiterv1.LimitRule) (labelSelector labels.Selector, fieldSelector fields.Selector) {
 	var err error
 	labelSelector, err = labels.Parse(rule.LabelSelector)
 	if err != nil {
@@ -141,10 +141,10 @@ func addIndex(mgr ctrl.Manager) error {
 	for i := range limiters.Items {
 		podLimiters = append(podLimiters, limiters.Items[i])
 		for _, rule := range limiters.Items[i].Spec.Rules {
-			labelSelect, fieldSelector := extractFromRule(rule)
+			labelSelect, fieldSelector := ExtractFromRule(rule)
 			indexerFunc := func(o client.Object) []string {
 				pod := o.(*corev1.Pod)
-				if labelSelect.Matches(labels.Set(o.GetLabels())) && fieldSelector.Matches(convertToFieldsSet(pod)) {
+				if labelSelect.Matches(labels.Set(o.GetLabels())) && fieldSelector.Matches(ConvertToFieldsSet(pod)) {
 					return []string{Match}
 				}
 				return []string{NotMatch}
