@@ -43,7 +43,6 @@ import (
 	podmarkerv1 "kube-stack.me/apis/podmarker/v1"
 	slov1beta1 "kube-stack.me/apis/slo/v1beta1"
 	centralprobecontrollers "kube-stack.me/controllers/centralprobe"
-	corecontrollers "kube-stack.me/controllers/core"
 	podlimitercontrollers "kube-stack.me/controllers/podlimiter"
 	podmarkercontrollers "kube-stack.me/controllers/podmarker"
 	slocontrollers "kube-stack.me/controllers/slo"
@@ -149,19 +148,12 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "PodMarker")
 		os.Exit(1)
 	}
-	if err = (&centralprobecontrollers.CentralProbeReconciler{
+	if err = (&centralprobecontrollers.Reconciler{
 		Client:   mgr.GetClient(),
 		Scheme:   mgr.GetScheme(),
 		Recorder: mgr.GetEventRecorderFor("CentralProbeReconciler"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "CentralProbe")
-		os.Exit(1)
-	}
-	if err = (&corecontrollers.PodReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Pod")
 		os.Exit(1)
 	}
 	if err = (&podlimitercontrollers.PodlimiterReconciler{

@@ -2,7 +2,59 @@
 // TODO(user): Add simple overview of use/purpose
 
 ## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+### CentralProbe
+Update Pod Readiness Status when Node is Not ready;
+example:
+```
+---
+apiVersion: centralprobe.kube-stack.me/v1
+kind: CentralProbe
+metadata:
+  name: centralprobe-sample
+spec:
+  selector:
+    matchLabels:
+      meta.k8s.alipay.com/biz-group: sigmaboss
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: readiness
+  labels:
+    meta.k8s.alipay.com/biz-group: sigmaboss
+spec:
+  restartPolicy: Never
+  containers:
+  - name: readiness
+    image: busybox
+    args:
+    - /bin/sh
+    - -c
+    - touch /tmp/test; sleep 60; rm -rf /tmp/test; sleep 300
+    readinessProbe:
+      exec:
+        command:
+        - cat
+        - /tmp/test
+      initialDelaySeconds: 10
+      periodSeconds: 5
+```
+
+### apiserver性能探测
+Probe watch latency and list all latency of apiserver.
+```
+$cd kube-stack
+$go run main.go -slo-mode=true -kubeconfig ~/.kube/config -target-namespace=default -target-pod-name=kube-stack-target-pod
+1.667539733941164e+09	INFO	watch.go	list all pods	{"time cost": "16.08025ms"}
+1.66753973394863e+09	INFO	watch.go	updatePodPeriodically	{"rv": "1818", "ts": 1667539733925, "nack#": 1}
+1.667539734009155e+09	INFO	watch.go	Watch Delay	{"ms": 84, "nack#": 0, "rv": "1818", "ts": "1667539733925"}
+1.66753974395995e+09	INFO	watch.go	updatePodPeriodically	{"rv": "1831", "ts": 1667539743949, "nack#": 1}
+1.6675397439599621e+09	INFO	watch.go	Watch Delay	{"ms": 10, "nack#": 0, "rv": "1831", "ts": "1667539743949"}
+```
+metrics:
+* watch_event_delay_ms
+* list_all_resource_duration_ms
+* watch_event_recv_total
 
 ## Getting Started
 You’ll need a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster.
@@ -49,22 +101,6 @@ This project aims to follow the Kubernetes [Operator pattern](https://kubernetes
 
 It uses [Controllers](https://kubernetes.io/docs/concepts/architecture/controller/)
 which provides a reconcile function responsible for synchronizing resources untile the desired state is reached on the cluster
-
-### apiserver性能探测
-list&watch集群的全量pod，定期给目标pod打patch，监测watch延迟以及list-all的延迟；
-```
-$cd kube-stack
-$go run main.go -slo-mode=true -kubeconfig ~/.kube/config -target-namespace=default -target-pod-name=kube-stack-target-pod
-1.667539733941164e+09	INFO	watch.go	list all pods	{"time cost": "16.08025ms"}
-1.66753973394863e+09	INFO	watch.go	updatePodPeriodically	{"rv": "1818", "ts": 1667539733925, "nack#": 1}
-1.667539734009155e+09	INFO	watch.go	Watch Delay	{"ms": 84, "nack#": 0, "rv": "1818", "ts": "1667539733925"}
-1.66753974395995e+09	INFO	watch.go	updatePodPeriodically	{"rv": "1831", "ts": 1667539743949, "nack#": 1}
-1.6675397439599621e+09	INFO	watch.go	Watch Delay	{"ms": 10, "nack#": 0, "rv": "1831", "ts": "1667539743949"}
-```
-产出指标有:
-* watch_event_delay_ms
-* list_all_resource_duration_ms
-* watch_event_recv_total
 
 ### Test It Out
 1. Install the CRDs into the cluster:

@@ -1,15 +1,33 @@
+---
 apiVersion: centralprobe.kube-stack.me/v1
 kind: CentralProbe
 metadata:
-  labels:
-    app.kubernetes.io/name: centralprobe
-    app.kubernetes.io/instance: centralprobe-sample
-    app.kubernetes.io/part-of: kube-stack
-    app.kuberentes.io/managed-by: kustomize
-    app.kubernetes.io/created-by: kube-stack
   name: centralprobe-sample
 spec:
-  # TODO(user): Add fields here
   selector:
     matchLabels:
       meta.k8s.alipay.com/biz-group: sigmaboss
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: readiness
+  labels:
+    test: readiness
+    meta.k8s.alipay.com/biz-group: sigmaboss
+spec:
+  restartPolicy: Never
+  containers:
+  - name: readiness
+    image: busybox
+    args:
+    - /bin/sh
+    - -c
+    - touch /tmp/test; sleep 60; rm -rf /tmp/test; sleep 300
+    readinessProbe:
+      exec:
+        command:
+        - cat
+        - /tmp/test
+      initialDelaySeconds: 10
+      periodSeconds: 5

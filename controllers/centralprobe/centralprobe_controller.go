@@ -42,8 +42,8 @@ import (
 	centralprobev1 "kube-stack.me/apis/centralprobe/v1"
 )
 
-// CentralProbeReconciler reconciles a CentralProbe object
-type CentralProbeReconciler struct {
+// Reconciler reconciles a CentralProbe object
+type Reconciler struct {
 	client.Client
 	Scheme   *runtime.Scheme
 	Recorder record.EventRecorder
@@ -51,9 +51,7 @@ type CentralProbeReconciler struct {
 
 var (
 	llog             logr.Logger = ctrl.Log.WithName("CentralProbeReconciler")
-	livenessManager  results.Manager
 	readinessManager results.Manager
-	startupManager   results.Manager
 	proberManager    prober.Manager
 )
 
@@ -69,17 +67,9 @@ const (
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the CentralProbe object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.13.0/pkg/reconcile
-func (r *CentralProbeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 
-	// TODO(user): your logic here
 	var centralProbeList centralprobev1.CentralProbeList
 	if err := r.List(ctx, &centralProbeList, client.InNamespace(req.Namespace)); err != nil {
 		llog.Error(err, "failed to list centralProbe", "namespace", req.Namespace)
@@ -105,7 +95,7 @@ func (r *CentralProbeReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	return ctrl.Result{}, nil
 }
 
-func (r *CentralProbeReconciler) isNodeReady(node *corev1.Node) bool {
+func (r *Reconciler) nodeReady(node *corev1.Node) bool {
 	for _, v := range node.Status.Conditions {
 		if v.Type == corev1.NodeReady && v.Status == corev1.ConditionTrue && time.Since(v.LastHeartbeatTime.Time).Seconds() < 180 {
 			return true
@@ -114,7 +104,7 @@ func (r *CentralProbeReconciler) isNodeReady(node *corev1.Node) bool {
 	return false
 }
 
-func (r *CentralProbeReconciler) updatePodStatus() {
+func (r *Reconciler) updatePodStatus() {
 	for result := range readinessManager.Updates() {
 		llog.Info("Pod Status Changed", "probe result", result)
 
@@ -131,7 +121,7 @@ func (r *CentralProbeReconciler) updatePodStatus() {
 			continue
 		}
 
-		if r.isNodeReady(&node) {
+		if r.nodeReady(&node) {
 			llog.Info("Node is Ready, Skip", "podName", pods.Items[0].Name, "nodeName", node.Name)
 			continue
 		}
@@ -167,7 +157,7 @@ func (r *CentralProbeReconciler) updatePodStatus() {
 	}
 }
 
-func (r *CentralProbeReconciler) processCentralProbe(ctx context.Context, cp *centralprobev1.CentralProbe) error {
+func (r *Reconciler) processCentralProbe(ctx context.Context, cp *centralprobev1.CentralProbe) error {
 	var pods corev1.PodList
 	if err := r.List(ctx, &pods, client.InNamespace(cp.Namespace), client.MatchingLabels(cp.Spec.Selector.MatchLabels)); err != nil {
 		llog.Error(err, "unable to list pods")
@@ -231,7 +221,7 @@ func (r *CentralProbeReconciler) processCentralProbe(ctx context.Context, cp *ce
 	return nil
 }
 
-func (r *CentralProbeReconciler) genQueueRequest(pod client.Object) []reconcile.Request {
+func (r *Reconciler) genQueueRequest(pod client.Object) []reconcile.Request {
 	return []reconcile.Request{
 		{
 			NamespacedName: types.NamespacedName{
@@ -242,7 +232,7 @@ func (r *CentralProbeReconciler) genQueueRequest(pod client.Object) []reconcile.
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *CentralProbeReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &corev1.Pod{}, podUIDIndexName, func(o client.Object) []string {
 		return []string{string(o.GetUID())}
 	}); err != nil {
@@ -250,9 +240,9 @@ func (r *CentralProbeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	// init prober manager
-	livenessManager = results.NewManager()
+	livenessManager := results.NewManager()
 	readinessManager = results.NewManager()
-	startupManager = results.NewManager()
+	startupManager := results.NewManager()
 	proberManager = prober.NewManager(r, livenessManager, readinessManager, startupManager, nil, r.Recorder)
 	go r.updatePodStatus()
 
