@@ -25,6 +25,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -56,6 +57,30 @@ func BindFlags(fs *flag.FlagSet) {
 
 func StartWatchSLO(config *rest.Config) {
 	clientSet := kubernetes.NewForConfigOrDie(config)
+	if _, err := clientSet.CoreV1().Pods(targetNamespace).Get(context.TODO(), targetPodName, v1.GetOptions{}); err != nil {
+		if errors.IsNotFound(err) {
+			pod := corev1.Pod{
+				ObjectMeta: v1.ObjectMeta{
+					Name: targetPodName,
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  "test",
+							Image: "busybox",
+							Args: []string{
+								"/bin/sh",
+								"-c",
+								"touch /tmp/test; sleep 60; rm -rf /tmp/test; sleep 300",
+							},
+						},
+					},
+				},
+			}
+			clientSet.CoreV1().Pods(targetNamespace).Create(context.TODO(), &pod, v1.CreateOptions{})
+		}
+	}
+
 	go checkEventDelay(clientSet)
 	go updatePodPeriodically(clientSet)
 	go cleanTimestamp()

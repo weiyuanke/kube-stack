@@ -84,7 +84,7 @@ spec:
       weight: 10
 ```
 
-### apiserver性能探测
+### apiserver slo
 Probe watch latency and list all latency of apiserver.
 ```
 $cd kube-stack
