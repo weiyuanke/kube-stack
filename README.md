@@ -58,7 +58,31 @@ webhook endpoint: /validating-pod
 metrics:
 podlimiter_rule_current_num, labels: podlimiter,rule
 
-
+### PodMarker
+add labels to pod;
+```
+apiVersion: podmarker.kube-stack.me/v1
+kind: PodMarker
+metadata:
+  name: podmarker-sample
+spec:
+  selector: # scope
+    matchLabels:
+      app: vm
+  addLabels:
+  - key: addLabelKey # label key
+    valueFromPod: "{.status.podIP}" # json path
+    valueFromNode: "{.status.podIP}"
+  markLabel:
+    name: testKey # label key
+    values:
+    - value: one # label values
+      replicas: 2 # number of pod
+    - value: two
+      replicas: 3
+    - value: test
+      weight: 10
+```
 
 ### apiserver性能探测
 Probe watch latency and list all latency of apiserver.

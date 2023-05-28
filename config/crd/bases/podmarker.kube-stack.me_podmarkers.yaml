@@ -118,8 +118,6 @@ spec:
                 type: object
                 x-kubernetes-map-type: atomic
             required:
-            - addLabels
-            - markLabel
             - selector
             type: object
           status:

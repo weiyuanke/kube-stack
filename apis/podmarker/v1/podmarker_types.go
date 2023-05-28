@@ -29,8 +29,8 @@ type PodMarkerSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	Selector  *metav1.LabelSelector `json:"selector"`
-	AddLabels []LabelConfig         `json:"addLabels"`
-	MarkLabel *MarkLabel            `json:"markLabel"`
+	AddLabels []LabelConfig         `json:"addLabels,omitempty"`
+	MarkLabel *MarkLabel            `json:"markLabel,omitempty"`
 }
 
 type LabelConfig struct {

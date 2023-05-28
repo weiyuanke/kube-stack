@@ -41,8 +41,8 @@ import (
 	podmarkerv1 "kube-stack.me/apis/podmarker/v1"
 )
 
-// PodMarkerReconciler reconciles a PodMarker object
-type PodMarkerReconciler struct {
+// Reconciler reconciles a PodMarker object
+type Reconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 }
@@ -58,14 +58,7 @@ var (
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the PodMarker object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.13.0/pkg/reconcile
-func (r *PodMarkerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 
 	var podMarkers podmarkerv1.PodMarkerList
@@ -82,7 +75,6 @@ func (r *PodMarkerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	for _, pm := range podMarkers.Items {
 		if err := r.processPodMarker(ctx, &pm, req.Namespace); err != nil {
 			hasError = true
-			llog.Error(err, "error when processing podmarker", "podmarker", pm)
 		}
 	}
 
@@ -92,7 +84,7 @@ func (r *PodMarkerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	return ctrl.Result{}, nil
 }
 
-func (r *PodMarkerReconciler) processPodMarker(ctx context.Context, pm *podmarkerv1.PodMarker, namespace string) error {
+func (r *Reconciler) processPodMarker(ctx context.Context, pm *podmarkerv1.PodMarker, namespace string) error {
 	podList := make([]*corev1.Pod, 0)
 	{
 		var pods corev1.PodList
@@ -109,11 +101,12 @@ func (r *PodMarkerReconciler) processPodMarker(ctx context.Context, pm *podmarke
 	}
 	llog.Info("processPodMarker", "podmarker name", pm.Name, "number of pods", len(podList))
 
+	// process add label
 	for i := range podList {
 		changed := false
 		for _, val := range pm.Spec.AddLabels {
 			if val.ValueFromPod != "" {
-				v := extractValueByJsonPath(podList[i], val.ValueFromPod)
+				v := extractValueByJSONPath(podList[i], val.ValueFromPod)
 				if podList[i].Labels[val.Key] != v {
 					podList[i].Labels[val.Key] = v
 					changed = true
@@ -123,7 +116,7 @@ func (r *PodMarkerReconciler) processPodMarker(ctx context.Context, pm *podmarke
 			if val.ValueFromNode != "" && podList[i].Spec.NodeName != "" {
 				var node corev1.Node
 				if err := r.Get(ctx, types.NamespacedName{Name: podList[i].Spec.NodeName}, &node); err != nil {
-					v := extractValueByJsonPath(&node, val.ValueFromNode)
+					v := extractValueByJSONPath(&node, val.ValueFromNode)
 					if podList[i].Labels[val.Key] != v {
 						podList[i].Labels[val.Key] = v
 						changed = true
@@ -139,15 +132,29 @@ func (r *PodMarkerReconciler) processPodMarker(ctx context.Context, pm *podmarke
 		}
 	}
 
-	podIndex := 0
-	for _, value := range pm.Spec.MarkLabel.Values {
-		count := value.Replicas
-		if count <= 0 {
-			count = len(podList) * value.Weight / 100.0
+	// process mark label
+	if pm.Spec.MarkLabel != nil {
+		podIndex := 0
+		for _, value := range pm.Spec.MarkLabel.Values {
+			count := value.Replicas
+			if count <= 0 {
+				count = len(podList) * value.Weight / 100.0
+			}
+			for i := 0; i < count && podIndex < len(podList); i++ {
+				if podList[podIndex].Labels[pm.Spec.MarkLabel.Name] != value.Value {
+					podList[podIndex].Labels[pm.Spec.MarkLabel.Name] = value.Value
+					if err := r.Update(ctx, podList[podIndex]); err != nil {
+						llog.Error(err, "update pod")
+						return err
+					}
+				}
+				podIndex++
+			}
 		}
-		for i := 0; i < count && podIndex < len(podList); i++ {
-			if podList[podIndex].Labels[pm.Spec.MarkLabel.Name] != value.Value {
-				podList[podIndex].Labels[pm.Spec.MarkLabel.Name] = value.Value
+
+		for podIndex < len(podList) {
+			if podList[podIndex].Labels[pm.Spec.MarkLabel.Name] != "" {
+				podList[podIndex].Labels[pm.Spec.MarkLabel.Name] = ""
 				if err := r.Update(ctx, podList[podIndex]); err != nil {
 					llog.Error(err, "update pod")
 					return err
@@ -157,21 +164,10 @@ func (r *PodMarkerReconciler) processPodMarker(ctx context.Context, pm *podmarke
 		}
 	}
 
-	for podIndex < len(podList) {
-		if podList[podIndex].Labels[pm.Spec.MarkLabel.Name] != "" {
-			podList[podIndex].Labels[pm.Spec.MarkLabel.Name] = ""
-			if err := r.Update(ctx, podList[podIndex]); err != nil {
-				llog.Error(err, "update pod")
-				return err
-			}
-		}
-		podIndex++
-	}
-
 	return nil
 }
 
-func extractValueByJsonPath(pod client.Object, jsonPathExpr string) string {
+func extractValueByJSONPath(pod client.Object, jsonPathExpr string) string {
 	var (
 		err    error
 		unstct map[string]interface{}
@@ -200,7 +196,7 @@ func extractValueByJsonPath(pod client.Object, jsonPathExpr string) string {
 	return strings.Replace(base64.StdEncoding.EncodeToString(buf.Bytes()), "=", "", -1)
 }
 
-func (r *PodMarkerReconciler) findObjectForPodMaker(pod client.Object) []reconcile.Request {
+func (r *Reconciler) findObjectForPodMaker(pod client.Object) []reconcile.Request {
 	return []reconcile.Request{
 		{
 			NamespacedName: types.NamespacedName{
@@ -211,7 +207,7 @@ func (r *PodMarkerReconciler) findObjectForPodMaker(pod client.Object) []reconci
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *PodMarkerReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&podmarkerv1.PodMarker{}).
 		Watches(
