@@ -39,6 +39,26 @@ spec:
       initialDelaySeconds: 10
       periodSeconds: 5
 ```
+### Pod limiter
+limit pod create/update Operation
+```
+apiVersion: podlimiter.kube-stack.me/v1
+kind: Podlimiter
+metadata:
+  name: podlimiter-sample
+spec:
+  rules:
+  - name: pending # rule name
+    labelSelector: ""
+    fieldSelector: "spec.nodeName==" # available fields: "metadata.name", "metadata.namespace","spec.nodeName","spec.restartPolicy","spec.schedulerName","spec.serviceAccountName","status.phase","status.podIP","status.nominatedNodeName"
+    threshhold: 10 # The maximum number of eligible pods
+    enabled: true # true/false
+```
+webhook endpoint: /validating-pod
+metrics:
+podlimiter_rule_current_num, labels: podlimiter,rule
+
+
 
 ### apiserver性能探测
 Probe watch latency and list all latency of apiserver.

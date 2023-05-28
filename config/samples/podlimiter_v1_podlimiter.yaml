@@ -14,3 +14,4 @@ spec:
     labelSelector: ""
     fieldSelector: "spec.nodeName=="
     threshhold: 10
+    enabled: true

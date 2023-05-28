@@ -41,7 +41,6 @@ type LimitRule struct {
 	Name          string `json:"name"`
 	Threshhold    int    `json:"threshhold"`
 	Enabled       bool   `json:"enabled"`
-	Current       int    `json:"current,omitempty"`
 	LabelSelector string `json:"labelSelector,omitempty"`
 	FieldSelector string `json:"fieldSelector,omitempty"`
 }

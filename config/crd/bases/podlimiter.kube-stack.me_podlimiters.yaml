@@ -38,8 +38,6 @@ spec:
               rules:
                 items:
                   properties:
-                    current:
-                      type: integer
                     enabled:
                       type: boolean
                     fieldSelector:
