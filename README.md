@@ -100,6 +100,41 @@ metrics:
 * list_all_resource_duration_ms
 * watch_event_recv_total
 
+### pod delivery slo
+metrics endpoint: http://0.0.0.0:8080/metrics
+
+metrics:
+* fsm_enter_state_count{state, namespace}
+  * counter
+  * number of pods which entered the given state
+* pod_state_num{state, namespace}
+  * counter
+  * number of pods which stays in the given state
+```
+# HELP fsm_enter_state_count
+# TYPE fsm_enter_state_count counter
+fsm_enter_state_count{namespace="default",state="CreatedState"} 20
+fsm_enter_state_count{namespace="default",state="DeletedState"} 10
+fsm_enter_state_count{namespace="default",state="IpAllocatedState"} 20
+fsm_enter_state_count{namespace="default",state="ScheduledState"} 20
+fsm_enter_state_count{namespace="kube-system",state="CreatedState"} 8
+fsm_enter_state_count{namespace="kube-system",state="IpAllocatedState"} 8
+fsm_enter_state_count{namespace="kube-system",state="ReadyState"} 8
+fsm_enter_state_count{namespace="kube-system",state="ScheduledState"} 8
+
+# HELP pod_state_num
+# TYPE pod_state_num gauge
+pod_state_num{namespace="default",state="BeginState"} -10
+pod_state_num{namespace="default",state="CreatedState"} 0
+pod_state_num{namespace="default",state="IpAllocatedState"} 10
+pod_state_num{namespace="default",state="ScheduledState"} 0
+pod_state_num{namespace="kube-system",state="BeginState"} -8
+pod_state_num{namespace="kube-system",state="CreatedState"} 0
+pod_state_num{namespace="kube-system",state="IpAllocatedState"} 0
+pod_state_num{namespace="kube-system",state="ReadyState"} 8
+pod_state_num{namespace="kube-system",state="ScheduledState"} 0
+```
+
 ## Getting Started
 You’ll need a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster.
 **Note:** Your controller will automatically use the current context in your kubeconfig file (i.e. whatever cluster `kubectl cluster-info` shows).

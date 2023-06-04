@@ -15,11 +15,10 @@ func TestScheduleExtracter_ExtractEvent(t *testing.T) {
 		want    EventType
 		wantErr bool
 	}{
-		// TODO: Add test cases.
 		{
 			e: &ScheduleExtracter{},
 			args: args{
-				data: "{\"spec\":{\"nodeName\":\"testnode\"}}",
+				data: `{"spec":{"nodeName":"testnode"}}`,
 			},
 			want:    ScheduleEvent,
 			wantErr: false,
@@ -27,7 +26,7 @@ func TestScheduleExtracter_ExtractEvent(t *testing.T) {
 		{
 			e: &ScheduleExtracter{},
 			args: args{
-				data: "{\"spec\":{\"nodeName\":\"\"}}",
+				data: `{"spec":{"nodeName":""}}`,
 			},
 			want:    NoEvent,
 			wantErr: false,
@@ -67,7 +66,6 @@ func TestCreateExtracter_ExtractEvent(t *testing.T) {
 		want    EventType
 		wantErr bool
 	}{
-		// TODO: Add test cases.
 		{
 			e: &CreateExtracter{},
 			args: args{
@@ -111,7 +109,6 @@ func TestDeletedExtracter_ExtractEvent(t *testing.T) {
 		want    EventType
 		wantErr bool
 	}{
-		// TODO: Add test cases.
 		{
 			e: &DeletedExtracter{},
 			args: args{
@@ -147,7 +144,6 @@ func TestIpAllocatedExtracter_ExtractEvent(t *testing.T) {
 		want    EventType
 		wantErr bool
 	}{
-		// TODO: Add test cases.
 		{
 			e: &IpAllocatedExtracter{},
 			args: args{
@@ -183,7 +179,6 @@ func TestReadyExtractor_ExtractEvent(t *testing.T) {
 		want    EventType
 		wantErr bool
 	}{
-		// TODO: Add test cases.
 		{
 			e: &ReadyExtractor{},
 			args: args{
