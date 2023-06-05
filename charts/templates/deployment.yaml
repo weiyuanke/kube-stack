@@ -1,0 +1,147 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "kube-stack.fullname" . }}-controller-manager
+  labels:
+    app.kuberentes.io/instance: controller-manager
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: kube-stack
+    app.kubernetes.io/part-of: kube-stack
+  {{- include "kube-stack.labels" . | nindent 4 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kube-stack.fullname" . }}-controller-manager
+  labels:
+    app.kubernetes.io/component: manager
+    app.kubernetes.io/created-by: kube-stack
+    app.kubernetes.io/part-of: kube-stack
+    control-plane: controller-manager
+  {{- include "kube-stack.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.controllerManager.replicas }}
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+    {{- include "kube-stack.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        control-plane: controller-manager
+      {{- include "kube-stack.selectorLabels" . | nindent 8 }}
+      annotations:
+        kubectl.kubernetes.io/default-container: manager
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/arch
+                operator: In
+                values:
+                - amd64
+                - arm64
+                - ppc64le
+                - s390x
+              - key: kubernetes.io/os
+                operator: In
+                values:
+                - linux
+      containers:
+      - name: prometheus
+        image: prom/prometheus
+        ports:
+        - name: prometheus
+          containerPort: 9090
+        resources:
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+          requests:
+            memory: 50M
+            cpu: "50m"
+        volumeMounts:
+        - mountPath: /etc/prometheus
+          name: prometheus
+      - name: grafana
+        image: grafana/grafana:latest
+        ports:
+        - name: grafana
+          containerPort: 3000
+        resources:
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+          requests:
+            memory: 50M
+            cpu: "50m"
+        volumeMounts:
+        - mountPath: /var/lib/grafana
+          name: grafana-storage
+        - mountPath: /etc/grafana/provisioning/datasources
+          name: grafana-datasources
+        - mountPath: /etc/grafana/provisioning/dashboards
+          name: grafana-entry
+        - mountPath: /etc/dashboards
+          name: grafana-dashboards
+      - args:
+        - --health-probe-bind-address=:8081
+        - --metrics-bind-address=0.0.0.0:8080
+        - --leader-elect
+        - --leader-election-namespace={{ .Release.Namespace }}
+        - --webhook-cert-directory=/etc/certs
+        command:
+        - /usr/bin/manager
+        env:
+        - name: KUBERNETES_CLUSTER_DOMAIN
+          value: {{ quote .Values.kubernetesClusterDomain }}
+        image: {{ .Values.controllerManager.manager.image.repository }}:{{ .Values.controllerManager.manager.image.tag }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        name: manager
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+          requests:
+            memory: 50M
+            cpu: "50m"
+        volumeMounts:
+        - mountPath: /etc/certs
+          name: certs
+      serviceAccountName: {{ include "kube-stack.fullname" . }}-controller-manager
+      terminationGracePeriodSeconds: 10
+      volumes:
+      - name: grafana-storage
+        emptyDir: {}
+      - name: grafana-datasources
+        configMap:
+          defaultMode: 420
+          name: {{ include "kube-stack.fullname" . }}-grafana-datasources
+      - name: grafana-entry
+        configMap:
+          defaultMode: 420
+          name: {{ include "kube-stack.fullname" . }}-grafana-dashboard-entry
+      - name: grafana-dashboards
+        configMap:
+          defaultMode: 420
+          name: {{ include "kube-stack.fullname" . }}-grafana-dashboards
+      - name: prometheus
+        configMap:
+          defaultMode: 420
+          name: {{ include "kube-stack.fullname" . }}-prometheus
+      - name: certs
+        secret:
+          secretName: {{ include "kube-stack.fullname" . }}-certs

@@ -1,6 +1,15 @@
 # kube-stack
 // TODO(user): Add simple overview of use/purpose
 
+# Install
+```
+git clone https://github.com/weiyuanke/kube-stack.git
+cd kube-stack
+helm install test-kube-stack ./charts/
+# grafana listen on :3000
+# prometheus listen on :9090
+```
+
 ## Description
 ### CentralProbe
 Update Pod Readiness Status when Node is Not ready;

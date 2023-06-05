@@ -1,0 +1,7 @@
+controllerManager:
+  manager:
+    image:
+      repository: docker.io/weiyuanke/kube-stack
+      tag: "v0.1.0"
+  replicas: 1
+kubernetesClusterDomain: cluster.local
