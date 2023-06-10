@@ -19,7 +19,7 @@ func TestParseEvents(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    []event.EventType
+		want    []event.Type
 		wantErr bool
 	}{
 		// TODO: Add test cases.
@@ -32,7 +32,7 @@ func TestParseEvents(t *testing.T) {
 					},
 				},
 			},
-			want:    []event.EventType{event.ScheduleEvent},
+			want:    []event.Type{event.ScheduleEvent},
 			wantErr: false,
 		},
 		{
@@ -47,7 +47,7 @@ func TestParseEvents(t *testing.T) {
 					},
 				},
 			},
-			want:    []event.EventType{event.CreateEvent, event.ScheduleEvent},
+			want:    []event.Type{event.CreateEvent, event.ScheduleEvent},
 			wantErr: false,
 		},
 		{
@@ -59,7 +59,7 @@ func TestParseEvents(t *testing.T) {
 					},
 				},
 			},
-			want:    []event.EventType{event.CreateEvent},
+			want:    []event.Type{event.CreateEvent},
 			wantErr: false,
 		},
 		{
@@ -78,7 +78,7 @@ func TestParseEvents(t *testing.T) {
 					},
 				},
 			},
-			want:    []event.EventType{event.ScheduleEvent},
+			want:    []event.Type{event.ScheduleEvent},
 			wantErr: false,
 		},
 		{
@@ -86,7 +86,7 @@ func TestParseEvents(t *testing.T) {
 				old: &corev1.Pod{},
 				new: nil,
 			},
-			want:    []event.EventType{event.DeletedEvent},
+			want:    []event.Type{event.DeletedEvent},
 			wantErr: false,
 		},
 		{
@@ -112,7 +112,7 @@ func TestParseEvents(t *testing.T) {
 					},
 				},
 			},
-			want:    []event.EventType{event.ReadyEvent},
+			want:    []event.Type{event.ReadyEvent},
 			wantErr: false,
 		},
 	}

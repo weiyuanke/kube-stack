@@ -43,6 +43,12 @@ var (
 		},
 		[]string{"resource"},
 	)
+	listAllDurMetrics = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "list_all_resource_dur",
+		},
+		[]string{"resource"},
+	)
 	watchEventCounter = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "watch_event_recv_total",
@@ -56,4 +62,5 @@ func init() {
 	metrics.Registry.MustRegister(watchEventDelayMetrics)
 	metrics.Registry.MustRegister(listAllDurationMetrics)
 	metrics.Registry.MustRegister(watchEventCounter)
+	metrics.Registry.MustRegister(listAllDurMetrics)
 }

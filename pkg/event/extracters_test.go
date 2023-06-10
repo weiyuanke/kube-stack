@@ -12,7 +12,7 @@ func TestScheduleExtracter_ExtractEvent(t *testing.T) {
 		name    string
 		e       *ScheduleExtracter
 		args    args
-		want    EventType
+		want    Type
 		wantErr bool
 	}{
 		{
@@ -63,7 +63,7 @@ func TestCreateExtracter_ExtractEvent(t *testing.T) {
 		name    string
 		e       *CreateExtracter
 		args    args
-		want    EventType
+		want    Type
 		wantErr bool
 	}{
 		{
@@ -106,7 +106,7 @@ func TestDeletedExtracter_ExtractEvent(t *testing.T) {
 		name    string
 		e       *DeletedExtracter
 		args    args
-		want    EventType
+		want    Type
 		wantErr bool
 	}{
 		{
@@ -139,23 +139,23 @@ func TestIpAllocatedExtracter_ExtractEvent(t *testing.T) {
 	}
 	tests := []struct {
 		name    string
-		e       *IpAllocatedExtracter
+		e       *IPAllocatedExtracter
 		args    args
-		want    EventType
+		want    Type
 		wantErr bool
 	}{
 		{
-			e: &IpAllocatedExtracter{},
+			e: &IPAllocatedExtracter{},
 			args: args{
 				data: `{"status":{"podIP":"10.244.0.4"}}`,
 			},
-			want:    IpAllocatedEvent,
+			want:    IPAllocatedEvent,
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e := &IpAllocatedExtracter{}
+			e := &IPAllocatedExtracter{}
 			got, err := e.ExtractEvent(tt.args.data)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("IpAllocatedExtracter.ExtractEvent() error = %v, wantErr %v", err, tt.wantErr)
@@ -176,7 +176,7 @@ func TestReadyExtractor_ExtractEvent(t *testing.T) {
 		name    string
 		e       *ReadyExtractor
 		args    args
-		want    EventType
+		want    Type
 		wantErr bool
 	}{
 		{

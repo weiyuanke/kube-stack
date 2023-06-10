@@ -26,11 +26,11 @@ const (
 )
 
 var (
-	llog       logr.Logger            = ctrl.Log.WithName("watch.go")
-	extracters []event.EventExtracter = []event.EventExtracter{
+	llog       logr.Logger       = ctrl.Log.WithName("watch.go")
+	extracters []event.Extracter = []event.Extracter{
 		&event.CreateExtracter{},
 		&event.ScheduleExtracter{},
-		&event.IpAllocatedExtracter{},
+		&event.IPAllocatedExtracter{},
 		&event.ReadyExtractor{},
 		&event.DeletedExtracter{},
 	}
@@ -83,7 +83,7 @@ func NewPodState(name types.NamespacedName) *PodState {
 				Dst:  string(scheduledState),
 			},
 			{
-				Name: string(event.IpAllocatedEvent),
+				Name: string(event.IPAllocatedEvent),
 				Src:  []string{string(scheduledState)},
 				Dst:  string(ipAllocatedState),
 			},
@@ -163,7 +163,7 @@ func (ps *PodState) ProcessEvent(pod *corev1.Pod) {
 	ps.incoming <- pod
 }
 
-func parseEvents(old *corev1.Pod, new *corev1.Pod) ([]event.EventType, error) {
+func parseEvents(old *corev1.Pod, new *corev1.Pod) ([]event.Type, error) {
 	oldBytes, err := json.Marshal(old)
 	if err != nil {
 		return nil, err
@@ -179,7 +179,7 @@ func parseEvents(old *corev1.Pod, new *corev1.Pod) ([]event.EventType, error) {
 		return nil, err
 	}
 
-	result := make([]event.EventType, 0)
+	result := make([]event.Type, 0)
 	for i := range extracters {
 		if e, err := extracters[i].ExtractEvent(string(diff)); err == nil && e != event.NoEvent {
 			result = append(result, e)

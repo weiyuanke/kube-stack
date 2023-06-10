@@ -25,6 +25,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -126,7 +127,9 @@ func (r *Reconciler) processPodMarker(ctx context.Context, pm *podmarkerv1.PodMa
 		}
 		if changed {
 			if err := r.Update(ctx, podList[i]); err != nil {
-				llog.Error(err, "update pod")
+				if !errors.IsConflict(err) {
+					llog.Error(err, "update pod")
+				}
 				return err
 			}
 		}
@@ -144,7 +147,9 @@ func (r *Reconciler) processPodMarker(ctx context.Context, pm *podmarkerv1.PodMa
 				if podList[podIndex].Labels[pm.Spec.MarkLabel.Name] != value.Value {
 					podList[podIndex].Labels[pm.Spec.MarkLabel.Name] = value.Value
 					if err := r.Update(ctx, podList[podIndex]); err != nil {
-						llog.Error(err, "update pod")
+						if !errors.IsConflict(err) {
+							llog.Error(err, "update pod")
+						}
 						return err
 					}
 				}
@@ -156,7 +161,9 @@ func (r *Reconciler) processPodMarker(ctx context.Context, pm *podmarkerv1.PodMa
 			if podList[podIndex].Labels[pm.Spec.MarkLabel.Name] != "" {
 				podList[podIndex].Labels[pm.Spec.MarkLabel.Name] = ""
 				if err := r.Update(ctx, podList[podIndex]); err != nil {
-					llog.Error(err, "update pod")
+					if !errors.IsConflict(err) {
+						llog.Error(err, "update pod")
+					}
 					return err
 				}
 			}

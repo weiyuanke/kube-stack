@@ -1,12 +1,6 @@
 apiVersion: slo.kube-stack.me/v1beta1
 kind: ResourceStateTransition
 metadata:
-  labels:
-    app.kubernetes.io/name: resourcestatetransition
-    app.kubernetes.io/instance: resourcestatetransition-sample
-    app.kubernetes.io/part-of: kube-stack
-    app.kuberentes.io/managed-by: kustomize
-    app.kubernetes.io/created-by: kube-stack
   name: resourcestatetransition-sample
 spec:
   selector:
@@ -17,7 +11,7 @@ spec:
   - name: CreatedState
   - name: ScheduledState
   - name: ReadyState
-  # events has orders
+  # orders matters
   events:
   - name: CreateEvent
     matches:

@@ -9,17 +9,25 @@ var (
 	llog logr.Logger = ctrl.Log.WithName("event")
 )
 
-type EventType string
+// Type define Event Type
+type Type string
 
 const (
-	CreateEvent      EventType = "CreateEvent"
-	ScheduleEvent    EventType = "ScheduleEvent"
-	DeletedEvent     EventType = "DeletedEvent"
-	IpAllocatedEvent EventType = "IpAllocatedEvent"
-	ReadyEvent       EventType = "ReadyEvent"
-	NoEvent          EventType = "NoEvent"
+	// CreateEvent Pod is created
+	CreateEvent Type = "CreateEvent"
+	// ScheduleEvent pod is scheduled
+	ScheduleEvent Type = "ScheduleEvent"
+	// DeletedEvent pod is deleted
+	DeletedEvent Type = "DeletedEvent"
+	// IPAllocatedEvent ip allocated for pod
+	IPAllocatedEvent Type = "IpAllocatedEvent"
+	// ReadyEvent pod is ready
+	ReadyEvent Type = "ReadyEvent"
+	// NoEvent empty event
+	NoEvent Type = "NoEvent"
 )
 
-type EventExtracter interface {
-	ExtractEvent(data string) (EventType, error)
+// Extracter extract event from the given string(json format)
+type Extracter interface {
+	ExtractEvent(data string) (Type, error)
 }

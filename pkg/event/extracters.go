@@ -8,16 +8,18 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+// CreateExtracter to extract create event
 type CreateExtracter struct {
 }
 
-func (e *CreateExtracter) ExtractEvent(data string) (EventType, error) {
-	var json_data interface{}
-	if err := json.Unmarshal([]byte(data), &json_data); err != nil {
+// ExtractEvent implement ExtractEvent interface
+func (e *CreateExtracter) ExtractEvent(data string) (Type, error) {
+	var jsonData interface{}
+	if err := json.Unmarshal([]byte(data), &jsonData); err != nil {
 		return NoEvent, err
 	}
 
-	res, err := jsonpath.JsonPathLookup(json_data, "$.metadata.creationTimestamp")
+	res, err := jsonpath.JsonPathLookup(jsonData, "$.metadata.creationTimestamp")
 	if err != nil {
 		return NoEvent, err
 	}
@@ -27,16 +29,18 @@ func (e *CreateExtracter) ExtractEvent(data string) (EventType, error) {
 	return NoEvent, nil
 }
 
+// ScheduleExtracter to extract schedule event
 type ScheduleExtracter struct {
 }
 
-func (e *ScheduleExtracter) ExtractEvent(data string) (EventType, error) {
-	var json_data interface{}
-	if err := json.Unmarshal([]byte(data), &json_data); err != nil {
+// ExtractEvent implement interface
+func (e *ScheduleExtracter) ExtractEvent(data string) (Type, error) {
+	var jsonData interface{}
+	if err := json.Unmarshal([]byte(data), &jsonData); err != nil {
 		return NoEvent, err
 	}
 
-	res, err := jsonpath.JsonPathLookup(json_data, "$.spec.nodeName")
+	res, err := jsonpath.JsonPathLookup(jsonData, "$.spec.nodeName")
 	if err != nil {
 		return NoEvent, err
 	}
@@ -46,41 +50,45 @@ func (e *ScheduleExtracter) ExtractEvent(data string) (EventType, error) {
 	return NoEvent, nil
 }
 
+// DeletedExtracter extract delete event
 type DeletedExtracter struct {
 }
 
-func (e *DeletedExtracter) ExtractEvent(data string) (EventType, error) {
-	var json_data interface{}
-	if err := json.Unmarshal([]byte(data), &json_data); err != nil {
+// ExtractEvent implement interface
+func (e *DeletedExtracter) ExtractEvent(data string) (Type, error) {
+	var jsonData interface{}
+	if err := json.Unmarshal([]byte(data), &jsonData); err != nil {
 		return NoEvent, err
 	}
 
-	spec, err := jsonpath.JsonPathLookup(json_data, "$.spec")
+	spec, err := jsonpath.JsonPathLookup(jsonData, "$.spec")
 	if err != nil {
 		return NoEvent, err
 	}
-	status, err := jsonpath.JsonPathLookup(json_data, "$.status")
+	status, err := jsonpath.JsonPathLookup(jsonData, "$.status")
 	if spec == nil && status == nil {
 		return DeletedEvent, nil
 	}
 	return NoEvent, nil
 }
 
-type IpAllocatedExtracter struct {
+// IPAllocatedExtracter extract ip allocation event
+type IPAllocatedExtracter struct {
 }
 
-func (e *IpAllocatedExtracter) ExtractEvent(data string) (EventType, error) {
-	var json_data interface{}
-	if err := json.Unmarshal([]byte(data), &json_data); err != nil {
+// ExtractEvent implement interface
+func (e *IPAllocatedExtracter) ExtractEvent(data string) (Type, error) {
+	var jsonData interface{}
+	if err := json.Unmarshal([]byte(data), &jsonData); err != nil {
 		return NoEvent, err
 	}
 
-	res, err := jsonpath.JsonPathLookup(json_data, "$.status.podIP")
+	res, err := jsonpath.JsonPathLookup(jsonData, "$.status.podIP")
 	if err != nil {
 		return NoEvent, err
 	}
 	if v, ok := res.(string); ok && v != "" {
-		return IpAllocatedEvent, nil
+		return IPAllocatedEvent, nil
 	}
 	return NoEvent, nil
 }
@@ -88,7 +96,8 @@ func (e *IpAllocatedExtracter) ExtractEvent(data string) (EventType, error) {
 type ReadyExtractor struct {
 }
 
-func (e *ReadyExtractor) ExtractEvent(data string) (EventType, error) {
+// ExtractEvent implement interface
+func (e *ReadyExtractor) ExtractEvent(data string) (Type, error) {
 	v := gjson.Get(data, `status.conditions.#(type==Ready).status`)
 	if v.Type != gjson.String || v.String() != string(corev1.ConditionTrue) {
 		return NoEvent, nil

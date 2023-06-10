@@ -3,10 +3,10 @@
 
 # Install
 ```
-git clone https://github.com/weiyuanke/kube-stack.git
-cd kube-stack
-helm install test-kube-stack ./charts/
-# grafana listen on :3000
+$git clone https://github.com/weiyuanke/kube-stack.git
+$cd kube-stack
+$helm install test-kube-stack ./charts/
+# grafana listen on :3000,with username/password: admin/admin
 # prometheus listen on :9090
 ```
 

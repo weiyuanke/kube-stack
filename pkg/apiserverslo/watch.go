@@ -97,6 +97,7 @@ func checkEventDelay(clientSet *kubernetes.Clientset) {
 		}
 
 		listAllDurationMetrics.WithLabelValues("pods").Observe(float64(time.Since(startTime).Milliseconds()))
+		listAllDurMetrics.WithLabelValues("pods").Set(float64(time.Since(startTime).Milliseconds()))
 		llog.Info("list all pods", "time cost", time.Since(startTime))
 
 		watchFunc := func(opt v1.ListOptions) (watch.Interface, error) {
