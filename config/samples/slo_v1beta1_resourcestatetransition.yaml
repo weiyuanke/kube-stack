@@ -5,7 +5,7 @@ metadata:
 spec:
   selector:
     apiVersion: v1
-    kind: PVC
+    kind: Pod
   states:
   - name: BeginState
   - name: CreatedState

@@ -43,10 +43,14 @@ type ResourceSelector struct {
 	// +optional
 	Name string `json:"name,omitempty"`
 
-	// A label query over a set of resources.
-	// If name is not empty, labelSelector will be ignored.
+	// A selector to restrict the list of returned objects by their labels.
+	// Defaults to everything.
 	// +optional
-	LabelSelector *metav1.LabelSelector `json:"labelSelector,omitempty"`
+	LabelSelector string `json:"labelSelector,omitempty" protobuf:"bytes,1,opt,name=labelSelector"`
+	// A selector to restrict the list of returned objects by their fields.
+	// Defaults to everything.
+	// +optional
+	FieldSelector string `json:"fieldSelector,omitempty" protobuf:"bytes,2,opt,name=fieldSelector"`
 }
 
 // State resource state

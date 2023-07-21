@@ -25,6 +25,7 @@ import (
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
+	"k8s.io/client-go/dynamic"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -98,6 +99,8 @@ func main() {
 	config.UserAgent = "kube-stack"
 	config.AcceptContentTypes = "application/vnd.kubernetes.protobuf,application/json"
 
+	dynamicClient := dynamic.NewForConfigOrDie(config)
+
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		setupLog.Error(err, "unable to gen clientset")
@@ -169,8 +172,9 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&slocontrollers.ResourceStateTransitionReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		DynamicClient: dynamicClient,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ResourceStateTransition")
 		os.Exit(1)

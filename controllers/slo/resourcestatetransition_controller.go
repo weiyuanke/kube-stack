@@ -18,19 +18,30 @@ package slo
 
 import (
 	"context"
+	"time"
 
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/tools/cache"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	slov1beta1 "kube-stack.me/apis/slo/v1beta1"
 )
 
+var (
+	finalizer     = slov1beta1.GroupVersion.Group + "/resource-state-finalizer"
+	reconcilerMap = cache.NewThreadSafeStore(cache.Indexers{}, cache.Indices{})
+)
+
 // ResourceStateTransitionReconciler reconciles a ResourceStateTransition object
 type ResourceStateTransitionReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme        *runtime.Scheme
+	DynamicClient dynamic.Interface
 }
 
 //+kubebuilder:rbac:groups=slo.kube-stack.me,resources=resourcestatetransitions,verbs=get;list;watch;create;update;patch;delete
@@ -39,17 +50,75 @@ type ResourceStateTransitionReconciler struct {
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the ResourceStateTransition object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.13.0/pkg/reconcile
 func (r *ResourceStateTransitionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 
-	// TODO(user): your logic here
+	defer func() {
+		llog.Info("", "ResourceReconciler Number", len(reconcilerMap.ListKeys()))
+	}()
+
+	var resourceStateTransition slov1beta1.ResourceStateTransition
+	if err := r.Get(ctx, req.NamespacedName, &resourceStateTransition); err != nil {
+		if errors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
+		return ctrl.Result{}, err
+	}
+
+	if !controllerutil.ContainsFinalizer(&resourceStateTransition, finalizer) {
+		controllerutil.AddFinalizer(&resourceStateTransition, finalizer)
+		if err := r.Update(ctx, &resourceStateTransition); err != nil {
+			if errors.IsConflict(err) {
+				return ctrl.Result{RequeueAfter: time.Second * 10}, nil
+			}
+			return ctrl.Result{}, err
+		}
+	}
+
+	objKey := client.ObjectKeyFromObject(&resourceStateTransition).String()
+
+	// process deletion
+	if !resourceStateTransition.DeletionTimestamp.IsZero() {
+		if controllerutil.ContainsFinalizer(&resourceStateTransition, finalizer) {
+			reconciler, exists := reconcilerMap.Get(objKey)
+			if exists {
+				reconciler.(*resourceReconciler).Stop()
+				reconcilerMap.Delete(objKey)
+			}
+
+			controllerutil.RemoveFinalizer(&resourceStateTransition, finalizer)
+			if err := r.Update(ctx, &resourceStateTransition); err != nil {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{}, nil
+		}
+		return ctrl.Result{}, nil
+	}
+
+	// process create/update
+	reconciler, exists := reconcilerMap.Get(objKey)
+	if !exists {
+		newReconciler, err := newResourceReconciler(ctx, r.Client, r.DynamicClient, &resourceStateTransition)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		newReconciler.Start()
+		reconcilerMap.Add(objKey, newReconciler)
+		return ctrl.Result{}, nil
+	}
+
+	rv := reconciler.(*resourceReconciler).resourceStateTransition.ResourceVersion
+	if resourceStateTransition.ResourceVersion == rv {
+		return ctrl.Result{}, nil
+	}
+
+	newReconciler, err := newResourceReconciler(ctx, r.Client, r.DynamicClient, &resourceStateTransition)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	newReconciler.Start()
+	reconcilerMap.Delete(objKey)
+	reconcilerMap.Add(objKey, newReconciler)
 
 	return ctrl.Result{}, nil
 }
