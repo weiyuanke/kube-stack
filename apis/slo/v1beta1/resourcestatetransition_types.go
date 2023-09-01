@@ -53,42 +53,11 @@ type ResourceSelector struct {
 	FieldSelector string `json:"fieldSelector,omitempty" protobuf:"bytes,2,opt,name=fieldSelector"`
 }
 
-// State resource state
-type State struct {
-	// +required
-	Name string `json:"name"`
-}
-
 // Transition state transition
 type Transition struct {
 	Source []string `json:"source"`
 	Target string   `json:"target"`
 	Event  string   `json:"event"`
-}
-
-type Match struct {
-	Selector ResourceSelector `json:"selector"`
-	// The input will cause an error if it does not follow this form:
-	//
-	//	<selector-syntax>         ::= <requirement> | <requirement> "," <selector-syntax>
-	//	<requirement>             ::= [!] KEY [ <set-based-restriction> | <exact-match-restriction> ]
-	//	<set-based-restriction>   ::= "" | <inclusion-exclusion> <value-set>
-	//	<inclusion-exclusion>     ::= <inclusion> | <exclusion>
-	//	<exclusion>               ::= "notin"
-	//	<inclusion>               ::= "in"
-	//	<value-set>               ::= "(" <values> ")"
-	//	<values>                  ::= VALUE | VALUE "," <values>
-	//	<exact-match-restriction> ::= ["="|"=="|"!="] VALUE
-	//
-	// KEY is a sequence of one or more characters following [ DNS_SUBDOMAIN "/" ] DNS_LABEL. Max length is 63 characters.
-	// VALUE is a sequence of zero or more characters "([A-Za-z0-9_-\.])". Max length is 63 characters.
-	// Delimiter is white space: (' ', '\t')
-	// Example of valid syntax:
-	//
-	//	"x in (foo,,baz),y,z notin ()"
-	// gjson express can be used in KEY
-	LabelSelector string `json:"labelSelector,omitempty"`
-	FieldSelector string `json:"fieldSelector,omitempty"`
 }
 
 // Event resource event
@@ -97,7 +66,7 @@ type Event struct {
 	Name string `json:"name"`
 
 	// +required
-	Matches []Match `json:"matches"`
+	Requirements []Requirement `json:"requirements"`
 }
 
 // ResourceStateTransitionSpec defines the desired state of ResourceStateTransition
@@ -107,8 +76,6 @@ type ResourceStateTransitionSpec struct {
 
 	// Selector restricts resource types that this StateTransition config applies to.
 	Selector ResourceSelector `json:"selector"`
-
-	States []State `json:"states"`
 
 	Transitions []Transition `json:"transitions"`
 

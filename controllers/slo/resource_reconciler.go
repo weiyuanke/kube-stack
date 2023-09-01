@@ -18,26 +18,32 @@ package slo
 
 import (
 	"context"
+	"sort"
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	slov1beta1 "kube-stack.me/apis/slo/v1beta1"
 )
 
 const (
-	requeuePeriod = time.Second
-	workerNumber  = 16
+	addOp        = "ADD"
+	deleteOp     = "DELETE"
+	updateOp     = "Update"
+	indexName    = "NamespacedNameIndex"
+	workerNumber = 16
 )
 
 type resourceReconciler struct {
@@ -48,9 +54,10 @@ type resourceReconciler struct {
 	queue                   workqueue.RateLimitingInterface
 	informer                cache.SharedIndexInformer
 	resourceStateTransition *slov1beta1.ResourceStateTransition
+	resourceMap             cache.ThreadSafeStore
 }
 
-func newResourceReconciler(ctx context.Context, client client.Client, dynamic dynamic.Interface, config *slov1beta1.ResourceStateTransition) (*resourceReconciler, error) {
+func newResourceReconciler(ctx context.Context, clt client.Client, dynamic dynamic.Interface, config *slov1beta1.ResourceStateTransition) (*resourceReconciler, error) {
 	// list options
 	tweatListOptions := func(options *metav1.ListOptions) {
 		if config.Spec.Selector.LabelSelector != "" {
@@ -61,13 +68,38 @@ func newResourceReconciler(ctx context.Context, client client.Client, dynamic dy
 		}
 	}
 
+	indexers := cache.Indexers{
+		indexName: func(obj interface{}) ([]string, error) {
+			return []string{obj.(*ResourceState).NamespacedName.String()}, nil
+		},
+	}
+
 	resourceReconciler := &resourceReconciler{
 		ctx:                     ctx,
-		client:                  client,
+		client:                  clt,
 		resourceStateTransition: config,
 		stopCh:                  make(chan struct{}),
 		queue:                   workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
+		resourceMap:             cache.NewThreadSafeStore(indexers, cache.Indices{}),
 	}
+
+	ticker := time.NewTicker(30 * time.Second)
+	go func() {
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				for _, v := range resourceReconciler.resourceMap.List() {
+					if v.(*ResourceState).Stopped {
+						resourceReconciler.resourceMap.Delete(string(v.(*ResourceState).Resource.GetUID()))
+					}
+				}
+				resourceStateMapSize.WithLabelValues(client.ObjectKeyFromObject(config).String()).Set(float64(len(resourceReconciler.resourceMap.ListKeys())))
+			case <-resourceReconciler.stopCh:
+				return
+			}
+		}
+	}()
 
 	// group version kind resource
 	gv, err := schema.ParseGroupVersion(config.Spec.Selector.APIVersion)
@@ -76,7 +108,7 @@ func newResourceReconciler(ctx context.Context, client client.Client, dynamic dy
 	}
 
 	gk := schema.GroupKind{Group: gv.Group, Kind: config.Spec.Selector.Kind}
-	restMapping, err := client.RESTMapper().RESTMapping(gk, gv.Version)
+	restMapping, err := clt.RESTMapper().RESTMapping(gk, gv.Version)
 	if err != nil {
 		return nil, err
 	}
@@ -88,13 +120,13 @@ func newResourceReconciler(ctx context.Context, client client.Client, dynamic dy
 	resourceReconciler.informer = factory.ForResource(restMapping.Resource).Informer()
 	resourceReconciler.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			resourceReconciler.Enqueue("ADD", obj)
+			resourceReconciler.Enqueue(addOp, obj)
 		},
 		UpdateFunc: func(_, newObj interface{}) {
-			resourceReconciler.Enqueue("UPDATE", newObj)
+			resourceReconciler.Enqueue(updateOp, newObj)
 		},
 		DeleteFunc: func(obj interface{}) {
-			resourceReconciler.Enqueue("DELETE", obj)
+			resourceReconciler.Enqueue(deleteOp, obj)
 		},
 	})
 
@@ -105,66 +137,106 @@ func newResourceReconciler(ctx context.Context, client client.Client, dynamic dy
 }
 
 func (r *resourceReconciler) Start() {
+	defer runtime.HandleCrash()
+	defer r.queue.ShutDown()
+
+	log.FromContext(r.ctx).Info("Starting workers")
 	for i := 0; i < workerNumber; i++ {
-		go wait.Until(r.worker, 0, r.stopCh)
+		go wait.Until(r.runWorker, 0, r.stopCh)
 	}
-	// Ensure all goroutines are cleaned up when the stop channel closes
-	go func() {
-		<-r.stopCh
-		r.queue.ShutDown()
-	}()
+
+	log.FromContext(r.ctx).Info("Workers started")
+	<-r.stopCh
+	log.FromContext(r.ctx).Info("Shutting down workers")
 }
 
 func (r *resourceReconciler) Stop() {
 	close(r.stopCh)
 }
 
-func (r *resourceReconciler) worker() {
+func (r *resourceReconciler) runWorker() {
 	for r.processNextWorkItem() {
 	}
 }
 
 func (r *resourceReconciler) processNextWorkItem() bool {
-	key, quit := r.queue.Get()
-	if quit {
+	elem, shutDown := r.queue.Get()
+	if shutDown {
 		return false
 	}
-	defer r.queue.Done(key)
 
-	err := r.Reconcile(key.(*objKey))
-	r.handleErr(err, key)
+	defer r.queue.Done(elem)
+
+	err := r.Reconcile(elem.(event))
+	if err == nil {
+		r.queue.Forget(elem)
+		return true
+	}
+
+	runtime.HandleError(err)
+	r.queue.AddRateLimited(elem)
 
 	return true
 }
 
-func (r *resourceReconciler) Reconcile(key *objKey) error {
-	unstructuredObj := key.object.(*unstructured.Unstructured)
-	llog.Info("", "xxxx========", unstructuredObj)
+type event struct {
+	op     string
+	object *unstructured.Unstructured
+}
+
+func (r *resourceReconciler) Reconcile(e event) error {
+	namespacedName := types.NamespacedName{
+		Namespace: e.object.GetNamespace(),
+		Name:      e.object.GetName(),
+	}
+
+	log.FromContext(r.ctx).Info(
+		"Received Event", "transition config", r.resourceStateTransition.Name, "op", e.op, "object", e.object)
+
+	if e.op == deleteOp {
+		pss, err := r.resourceMap.ByIndex(indexName, namespacedName.String())
+		if err != nil || len(pss) <= 0 {
+			log.FromContext(r.ctx).Info("No Resource by Index", "indexValue", namespacedName.String())
+		}
+		if len(pss) == 1 {
+			pss[0].(*ResourceState).EnqueueEvent(nil)
+		} else {
+			sort.Slice(pss, func(i, j int) bool {
+				return pss[i].(*ResourceState).CreateTime.After(pss[j].(*ResourceState).CreateTime)
+			})
+			for i := range pss {
+				if i == 0 {
+					pss[0].(*ResourceState).EnqueueEvent(nil)
+				} else {
+					pss[i].(*ResourceState).StopDispatching()
+					r.resourceMap.Delete(string(pss[i].(*ResourceState).Resource.GetUID()))
+				}
+			}
+		}
+	} else {
+		v, exists := r.resourceMap.Get(string(e.object.GetUID()))
+		if !exists {
+			rs, err := NewResourceState(r.ctx, namespacedName, r.resourceStateTransition)
+			if err != nil {
+				return err
+			}
+			r.resourceMap.Add(string(e.object.GetUID()), rs)
+			go rs.StartDispatching()
+			v = rs
+		}
+		v.(*ResourceState).EnqueueEvent(e.object)
+	}
 	return nil
 }
 
-type objKey struct {
-	event  string
-	object runtime.Object
-}
-
-func (r *resourceReconciler) Enqueue(event string, obj interface{}) {
+func (r *resourceReconciler) Enqueue(op string, obj interface{}) {
 	if obj == nil {
 		return
 	}
 
-	key := objKey{
-		event:  event,
-		object: obj.(runtime.Object),
+	e := event{
+		op:     op,
+		object: obj.(*unstructured.Unstructured),
 	}
-	r.queue.Add(&key)
-}
-
-func (r *resourceReconciler) handleErr(err error, key interface{}) {
-	if err == nil {
-		r.queue.Forget(key)
-		return
-	}
-
-	r.queue.AddAfter(key, requeuePeriod)
+	r.queue.Add(e)
 }

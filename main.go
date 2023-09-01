@@ -164,13 +164,6 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "Podlimiter")
 		os.Exit(1)
 	}
-	if err = (&slocontrollers.PodSLOReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "PodSLO")
-		os.Exit(1)
-	}
 	if err = (&slocontrollers.ResourceStateTransitionReconciler{
 		Client:        mgr.GetClient(),
 		Scheme:        mgr.GetScheme(),

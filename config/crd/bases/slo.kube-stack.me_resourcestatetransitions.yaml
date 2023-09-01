@@ -41,72 +41,28 @@ spec:
                 items:
                   description: Event resource event
                   properties:
-                    matches:
-                      items:
-                        properties:
-                          fieldSelector:
-                            type: string
-                          labelSelector:
-                            description: "The input will cause an error if it does
-                              not follow this form: \n <selector-syntax>         ::=
-                              <requirement> | <requirement> \",\" <selector-syntax>
-                              <requirement>             ::= [!] KEY [ <set-based-restriction>
-                              | <exact-match-restriction> ] <set-based-restriction>
-                              \  ::= \"\" | <inclusion-exclusion> <value-set> <inclusion-exclusion>
-                              \    ::= <inclusion> | <exclusion> <exclusion>               ::=
-                              \"notin\" <inclusion>               ::= \"in\" <value-set>
-                              \              ::= \"(\" <values> \")\" <values>                  ::=
-                              VALUE | VALUE \",\" <values> <exact-match-restriction>
-                              ::= [\"=\"|\"==\"|\"!=\"] VALUE \n KEY is a sequence
-                              of one or more characters following [ DNS_SUBDOMAIN
-                              \"/\" ] DNS_LABEL. Max length is 63 characters. VALUE
-                              is a sequence of zero or more characters \"([A-Za-z0-9_-\\.])\".
-                              Max length is 63 characters. Delimiter is white space:
-                              (' ', '\\t') Example of valid syntax: \n \"x in (foo,,baz),y,z
-                              notin ()\" gjson express can be used in KEY"
-                            type: string
-                          selector:
-                            description: ResourceSelector the resources which will
-                              be selected.
-                            properties:
-                              apiVersion:
-                                description: APIVersion represents the API version
-                                  of the target resources.
-                                type: string
-                              fieldSelector:
-                                description: A selector to restrict the list of returned
-                                  objects by their fields. Defaults to everything.
-                                type: string
-                              kind:
-                                description: Kind represents the Kind of the target
-                                  resources.
-                                type: string
-                              labelSelector:
-                                description: A selector to restrict the list of returned
-                                  objects by their labels. Defaults to everything.
-                                type: string
-                              name:
-                                description: Name of the target resource. Default
-                                  is empty, which means selecting all resources.
-                                type: string
-                              namespace:
-                                description: Namespace of the target resource. Default
-                                  is empty, which means inherit from the parent object
-                                  scope.
-                                type: string
-                            required:
-                            - apiVersion
-                            - kind
-                            type: object
-                        required:
-                        - selector
-                        type: object
-                      type: array
                     name:
                       type: string
+                    requirements:
+                      items:
+                        properties:
+                          key:
+                            type: string
+                          operator:
+                            type: string
+                          strValues:
+                            items:
+                              type: string
+                            type: array
+                        required:
+                        - key
+                        - operator
+                        - strValues
+                        type: object
+                      type: array
                   required:
-                  - matches
                   - name
+                  - requirements
                   type: object
                 type: array
               selector:
@@ -140,16 +96,6 @@ spec:
                 - apiVersion
                 - kind
                 type: object
-              states:
-                items:
-                  description: State resource state
-                  properties:
-                    name:
-                      type: string
-                  required:
-                  - name
-                  type: object
-                type: array
               transitions:
                 items:
                   description: Transition state transition
@@ -171,7 +117,6 @@ spec:
             required:
             - events
             - selector
-            - states
             - transitions
             type: object
           status:

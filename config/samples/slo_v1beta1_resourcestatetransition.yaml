@@ -1,37 +1,50 @@
+---
 apiVersion: slo.kube-stack.me/v1beta1
 kind: ResourceStateTransition
 metadata:
-  name: resourcestatetransition-sample
+  name: resourcestatetransition-pod
 spec:
   selector:
     apiVersion: v1
     kind: Pod
-  states:
-  - name: BeginState
-  - name: CreatedState
-  - name: ScheduledState
-  - name: ReadyState
-  # orders matters
+    namespace: default
   events:
   - name: CreateEvent
-    matches:
-    - selector:
-        apiVersion: v1
-        kind: pod
-      # 支持gjon表达式
-      labelSelector: |
-        metadata.creationTimestamp!=""
+    requirements:
+    - key: "metadata.creationTimestamp"
+      operator: "notin"
+      strValues:
+      - ""
   - name: ScheduleEvent
-    matches:
-    - selector:
-        apiVersion: v1
-        kind: pod
-      fieldSelector: "spec.nodeName!="
-    - selector:
-        apiVersion: v1
-        kind: Event
-      labelSelector: |
-        message="Synced successfully", reason="Synced"
+    requirements:
+    - key: "spec.nodeName"
+      operator: "notin"
+      strValues:
+      - ""
+  - name: DeleteEvent
+    requirements:
+    - key: "metadata.deletionTimestamp"
+      operator: "notin"
+      strValues:
+      - ""
+  - name: DeletedEvent
+    requirements:
+    - key: "apiVersion"
+      operator: "in"
+      strValues:
+      - ""
+    - key: "kind"
+      operator: "in"
+      strValues:
+      - ""
+    - key: "metadata"
+      operator: "in"
+      strValues:
+      - ""
+    - key: "spec"
+      operator: "in"
+      strValues:
+      - ""
   transitions:
   - source:
     - BeginState
@@ -41,3 +54,58 @@ spec:
     - CreatedState
     target: ScheduledState
     event: ScheduleEvent
+  - source:
+    - CreatedState
+    - ScheduledState
+    target: EndState
+    event: DeletedEvent
+---
+apiVersion: slo.kube-stack.me/v1beta1
+kind: ResourceStateTransition
+metadata:
+  name: resourcestatetransition-pvc
+spec:
+  selector:
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    namespace: default
+  events:
+  - name: CreateEvent
+    requirements:
+    - key: "metadata.creationTimestamp"
+      operator: "notin"
+      strValues:
+      - ""
+  - name: DeleteEvent
+    requirements:
+    - key: "metadata.deletionTimestamp"
+      operator: "notin"
+      strValues:
+      - ""
+  - name: DeletedEvent
+    requirements:
+    - key: "apiVersion"
+      operator: "in"
+      strValues:
+      - ""
+    - key: "kind"
+      operator: "in"
+      strValues:
+      - ""
+    - key: "metadata"
+      operator: "in"
+      strValues:
+      - ""
+    - key: "spec"
+      operator: "in"
+      strValues:
+      - ""
+  transitions:
+  - source:
+    - BeginState
+    target: CreatedState
+    event: CreateEvent
+  - source:
+    - CreatedState
+    target: EndState
+    event: DeletedEvent

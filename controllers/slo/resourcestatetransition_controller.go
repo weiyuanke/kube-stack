@@ -51,10 +51,8 @@ type ResourceStateTransitionReconciler struct {
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *ResourceStateTransitionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
-
 	defer func() {
-		llog.Info("", "ResourceReconciler Number", len(reconcilerMap.ListKeys()))
+		log.FromContext(ctx).Info("", "ResourceReconciler Number", len(reconcilerMap.ListKeys()))
 	}()
 
 	var resourceStateTransition slov1beta1.ResourceStateTransition
@@ -102,7 +100,7 @@ func (r *ResourceStateTransitionReconciler) Reconcile(ctx context.Context, req c
 		if err != nil {
 			return ctrl.Result{}, err
 		}
-		newReconciler.Start()
+		go newReconciler.Start()
 		reconcilerMap.Add(objKey, newReconciler)
 		return ctrl.Result{}, nil
 	}
@@ -116,7 +114,8 @@ func (r *ResourceStateTransitionReconciler) Reconcile(ctx context.Context, req c
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	newReconciler.Start()
+	go newReconciler.Start()
+	reconciler.(*resourceReconciler).Stop()
 	reconcilerMap.Delete(objKey)
 	reconcilerMap.Add(objKey, newReconciler)
 
