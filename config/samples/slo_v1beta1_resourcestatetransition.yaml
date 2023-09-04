@@ -7,27 +7,38 @@ spec:
   selector:
     apiVersion: v1
     kind: Pod
-    namespace: default
   events:
-  - name: CreateEvent
+  - name: Created
     requirements:
     - key: "metadata.creationTimestamp"
       operator: "notin"
       strValues:
       - ""
-  - name: ScheduleEvent
+  - name: Scheduled
     requirements:
     - key: "spec.nodeName"
       operator: "notin"
       strValues:
       - ""
-  - name: DeleteEvent
+  - name: IPAllocated
+    requirements:
+    - key: "status.podIP"
+      operator: "notin"
+      strValues:
+      - ""
+  - name: Ready
+    requirements:
+    - key: "status.conditions.#(type==Ready).status"
+      operator: "in"
+      strValues:
+      - "True"
+  - name: Delete
     requirements:
     - key: "metadata.deletionTimestamp"
       operator: "notin"
       strValues:
       - ""
-  - name: DeletedEvent
+  - name: Deleted
     requirements:
     - key: "apiVersion"
       operator: "in"
@@ -48,64 +59,90 @@ spec:
   transitions:
   - source:
     - BeginState
+    event: Created
     target: CreatedState
-    event: CreateEvent
   - source:
     - CreatedState
+    event: Scheduled
     target: ScheduledState
-    event: ScheduleEvent
   - source:
-    - CreatedState
     - ScheduledState
-    target: EndState
-    event: DeletedEvent
----
-apiVersion: slo.kube-stack.me/v1beta1
-kind: ResourceStateTransition
-metadata:
-  name: resourcestatetransition-pvc
-spec:
-  selector:
-    apiVersion: v1
-    kind: PersistentVolumeClaim
-    namespace: default
-  events:
-  - name: CreateEvent
-    requirements:
-    - key: "metadata.creationTimestamp"
-      operator: "notin"
-      strValues:
-      - ""
-  - name: DeleteEvent
-    requirements:
-    - key: "metadata.deletionTimestamp"
-      operator: "notin"
-      strValues:
-      - ""
-  - name: DeletedEvent
-    requirements:
-    - key: "apiVersion"
-      operator: "in"
-      strValues:
-      - ""
-    - key: "kind"
-      operator: "in"
-      strValues:
-      - ""
-    - key: "metadata"
-      operator: "in"
-      strValues:
-      - ""
-    - key: "spec"
-      operator: "in"
-      strValues:
-      - ""
-  transitions:
+    event: IPAllocated
+    target: IPAllocatedState
   - source:
-    - BeginState
-    target: CreatedState
-    event: CreateEvent
+    - IPAllocatedState
+    event: Ready
+    target: ReadyState
   - source:
-    - CreatedState
-    target: EndState
-    event: DeletedEvent
+    - "*"
+    event: Delete
+    target: DeleteState
+  - source:
+    - "*"
+    event: Deleted
+    target: DeletedState
+    final: true
+# ---
+# apiVersion: slo.kube-stack.me/v1beta1
+# kind: ResourceStateTransition
+# metadata:
+#   name: resourcestatetransition-pvc
+# spec:
+#   selector:
+#     apiVersion: v1
+#     kind: PersistentVolumeClaim
+#   events:
+#   - name: Created
+#     requirements:
+#     - key: "metadata.creationTimestamp"
+#       operator: "notin"
+#       strValues:
+#       - ""
+#   - name: Bounded
+#     requirements:
+#     - key: "status.phase"
+#       operator: "in"
+#       strValues:
+#       - "Bound"
+#   - name: Delete
+#     requirements:
+#     - key: "metadata.deletionTimestamp"
+#       operator: "notin"
+#       strValues:
+#       - ""
+#   - name: Deleted
+#     requirements:
+#     - key: "apiVersion"
+#       operator: "in"
+#       strValues:
+#       - ""
+#     - key: "kind"
+#       operator: "in"
+#       strValues:
+#       - ""
+#     - key: "metadata"
+#       operator: "in"
+#       strValues:
+#       - ""
+#     - key: "spec"
+#       operator: "in"
+#       strValues:
+#       - ""
+#   transitions:
+#   - source:
+#     - BeginState
+#     event: Created
+#     target: CreatedState
+#   - source:
+#     - CreatedState
+#     event: Bounded
+#     target: BoundedState
+#   - source:
+#     - "*"
+#     event: Delete
+#     target: DeleteState
+#   - source:
+#     - DeleteState
+#     event: Deleted
+#     target: DeletedState
+#     final: true

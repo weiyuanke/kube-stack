@@ -94,7 +94,7 @@ func newResourceReconciler(ctx context.Context, clt client.Client, dynamic dynam
 						resourceReconciler.resourceMap.Delete(string(v.(*ResourceState).Resource.GetUID()))
 					}
 				}
-				resourceStateMapSize.WithLabelValues(client.ObjectKeyFromObject(config).String()).Set(float64(len(resourceReconciler.resourceMap.ListKeys())))
+				resourceStateMapSize.WithLabelValues(config.Name).Set(float64(len(resourceReconciler.resourceMap.ListKeys())))
 			case <-resourceReconciler.stopCh:
 				return
 			}
@@ -189,9 +189,6 @@ func (r *resourceReconciler) Reconcile(e event) error {
 		Namespace: e.object.GetNamespace(),
 		Name:      e.object.GetName(),
 	}
-
-	log.FromContext(r.ctx).Info(
-		"Received Event", "transition config", r.resourceStateTransition.Name, "op", e.op, "object", e.object)
 
 	if e.op == deleteOp {
 		pss, err := r.resourceMap.ByIndex(indexName, namespacedName.String())

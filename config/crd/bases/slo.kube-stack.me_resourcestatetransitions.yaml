@@ -84,10 +84,6 @@ spec:
                     description: A selector to restrict the list of returned objects
                       by their labels. Defaults to everything.
                     type: string
-                  name:
-                    description: Name of the target resource. Default is empty, which
-                      means selecting all resources.
-                    type: string
                   namespace:
                     description: Namespace of the target resource. Default is empty,
                       which means inherit from the parent object scope.
@@ -102,6 +98,9 @@ spec:
                   properties:
                     event:
                       type: string
+                    final:
+                      default: false
+                      type: boolean
                     source:
                       items:
                         type: string

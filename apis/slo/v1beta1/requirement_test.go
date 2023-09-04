@@ -30,6 +30,15 @@ func TestMatches(t *testing.T) {
 	}{
 		{
 			requirement: Requirement{
+				Key:       "status.conditions.#(type==Ready).status",
+				Operator:  "in",
+				StrValues: []string{"True"},
+			},
+			args: `{"metadata":{"$setElementOrder/finalizers":["protection-delete.pod.sigma.ali/naming-registered","finalizer.k8s.alipay.com/zappinfo","pod.beta1.sigma.ali/cni-allocated","finalizers.k8s.alipay.com/pod-fqdn"],"annotations":{"meta.k8s.alipay.com/trace-context":"[{\"trace_id\":\"f86136c0fa89a2700000000000000000\",\"parent_id\":\"\",\"root_span_id\":\"1820e9263f6a097e\",\"delivery_type\":\"PodCreate\",\"status\":\"closed\",\"services\":[{\"component\":\"cloud-scheduler\",\"span_id\":\"a7927b46959a5bf8\"},{\"component\":\"default-scheduler\",\"span_id\":\"2b3328ebe0bc363f\"},{\"component\":\"cni-service\",\"span_id\":\"899c038e43a62d7a\"},{\"component\":\"kubelet\",\"span_id\":\"fe32968d3986bb2a\"},{\"component\":\"zappinfo-controller\",\"span_id\":\"7d5c2485ab79855b\"},{\"component\":\"naming-controller\",\"span_id\":\"947883856f273c5c\"}],\"start_at\":\"2023-09-04T13:50:51+08:00\",\"finish_at\":\"2023-09-04T13:51:03+08:00\",\"extra_info\":null}]"},"resourceVersion":"3309939723"},"status":{"$setElementOrder/conditions":[{"type":"IPAllocated"},{"type":"NamingRegistered"},{"type":"Initialized"},{"type":"Ready"},{"type":"ContainersReady"},{"type":"ContainerDiskPressure"},{"type":"PodScheduled"}],"conditions":[{"lastTransitionTime":"2023-09-04T05:51:03Z","message":null,"reason":null,"status":"True","type":"Ready"}]}}`,
+			want: true,
+		},
+		{
+			requirement: Requirement{
 				Key:       "apiVersion",
 				Operator:  "in",
 				StrValues: []string{""},

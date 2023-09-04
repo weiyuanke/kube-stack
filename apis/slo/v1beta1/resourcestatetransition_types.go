@@ -38,11 +38,6 @@ type ResourceSelector struct {
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
 
-	// Name of the target resource.
-	// Default is empty, which means selecting all resources.
-	// +optional
-	Name string `json:"name,omitempty"`
-
 	// A selector to restrict the list of returned objects by their labels.
 	// Defaults to everything.
 	// +optional
@@ -58,6 +53,9 @@ type Transition struct {
 	Source []string `json:"source"`
 	Target string   `json:"target"`
 	Event  string   `json:"event"`
+	// +optional
+	// +kubebuilder:default:=false
+	Final bool `json:"final"`
 }
 
 // Event resource event

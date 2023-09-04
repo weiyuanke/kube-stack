@@ -12,7 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	slov1beta1 "kube-stack.me/apis/slo/v1beta1"
@@ -20,7 +19,6 @@ import (
 
 const (
 	beginState       = "BeginState"
-	endState         = "EndState"
 	resourceStateKey = "ResourceStateKey"
 )
 
@@ -64,10 +62,21 @@ func NewResourceState(ctx context.Context, name types.NamespacedName, config *sl
 	}
 	ps.obj = obj
 
+	stateMap := make(map[string]bool, 0)
+	allStates := make([]string, 0)
+	for _, tran := range config.Spec.Transitions {
+		stateMap[tran.Target] = tran.Final
+		allStates = append(allStates, tran.Target)
+	}
+
 	events := make([]fsm.EventDesc, 0)
 	for _, tran := range config.Spec.Transitions {
 		src := make([]string, 0)
 		for _, s := range tran.Source {
+			if s == "*" {
+				src = allStates
+				break
+			}
 			src = append(src, s)
 		}
 
@@ -81,16 +90,14 @@ func NewResourceState(ctx context.Context, name types.NamespacedName, config *sl
 	enterStateFunc := func(e *fsm.Event) {
 		metaVal, _ := e.FSM.Metadata(resourceStateKey)
 		rs := metaVal.(*ResourceState)
-		tranName := client.ObjectKeyFromObject(rs.resourceStateTransition).String()
+		tranName := rs.resourceStateTransition.Name
 		enterStateCounter.WithLabelValues(tranName, e.Dst).Inc()
 		currentStateNum.WithLabelValues(tranName, e.Dst).Inc()
 		currentStateNum.WithLabelValues(tranName, e.Src).Dec()
 
-		if e.Dst == string(endState) {
-			if !rs.Stopped {
-				rs.Stopped = true
-				close(rs.stopCh)
-			}
+		if stateMap[e.Dst] && !rs.Stopped {
+			rs.Stopped = true
+			close(rs.stopCh)
 		}
 	}
 
@@ -164,7 +171,7 @@ func (rs *ResourceState) parseEvents(old, new *unstructured.Unstructured) ([]str
 			result = append(result, event.Name)
 		}
 	}
-	log.FromContext(rs.ctx).Info("diff: "+string(diff), "events", result)
+	log.FromContext(rs.ctx).Info("diff: "+string(diff), "events", result, "namespacedName", rs.NamespacedName, "gvk", rs.gvk)
 
 	return result, nil
 }

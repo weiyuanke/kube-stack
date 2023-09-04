@@ -14,13 +14,13 @@ var (
 	)
 	enterStateCounter = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "resourcestate_state_count",
+			Name: "resourcestate_total_num",
 		},
 		[]string{"transName", "state"},
 	)
 	currentStateNum = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "resourcestate_state_num",
+			Name: "resourcestate_current_num",
 		},
 		[]string{"transName", "state"},
 	)
