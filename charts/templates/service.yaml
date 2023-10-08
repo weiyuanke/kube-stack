@@ -16,6 +16,7 @@ spec:
     control-plane: controller-manager
   {{- include "kube-stack.selectorLabels" . | nindent 4 }}
   type: ClusterIP
+  clusterIP: None
   ports:
   - name: http-prometheus
     port: 9090

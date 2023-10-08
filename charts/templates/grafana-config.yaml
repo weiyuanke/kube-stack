@@ -169,7 +169,7 @@ data:
                 "uid": "P1809F7CD0C75ACF3"
               },
               "editorMode": "code",
-              "expr": "sum(increase(fsm_enter_state_count{}[1m])) by (state)",
+              "expr": "sum(increase(resourcestate_total_num{}[1m])) by (state)",
               "legendFormat": "__auto",
               "range": true,
               "refId": "A"
@@ -263,13 +263,13 @@ data:
                 "uid": "P1809F7CD0C75ACF3"
               },
               "editorMode": "code",
-              "expr": "sum(pod_state_num{}) by (state)",
+              "expr": "sum(resourcestate_current_num{}) by (state)",
               "legendFormat": "__auto",
               "range": true,
               "refId": "A"
             }
           ],
-          "title": "Pod状态统计",
+          "title": "Pod当前状态统计",
           "type": "timeseries"
         },
         {
@@ -555,7 +555,7 @@ data:
           "type": "timeseries"
         }
       ],
-      "refresh": "10s",
+      "refresh": "5s",
       "schemaVersion": 38,
       "style": "dark",
       "tags": [],

@@ -1,7 +1,16 @@
 controllerManager:
-  manager:
-    image:
-      repository: docker.io/weiyuanke/kube-stack
-      tag: "v0.1.1"
-  replicas: 1
+  repository: weiyuanke/kube-stack
+  tag: "v0.1.1"
+grafana:
+  repository: grafana/grafana
+  tag: "9.5.12"
+prometheus:
+  repository: bitnami/prometheus
+  tag: "2.47.1"
+global:
+  imageRegistry: docker.io
+  inClusterMode: true
+  kubeConfigSecretName: ""
+  kubeConfigSecretKey: ""
+  nodeSelector: {}
 kubernetesClusterDomain: cluster.local

@@ -1,3 +1,5 @@
+{{- if .Values.global.inClusterMode }}
+---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -8,6 +10,7 @@ metadata:
     app.kubernetes.io/created-by: kube-stack
     app.kubernetes.io/part-of: kube-stack
   {{- include "kube-stack.labels" . | nindent 4 }}
+{{- end }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -20,7 +23,7 @@ metadata:
     control-plane: controller-manager
   {{- include "kube-stack.labels" . | nindent 4 }}
 spec:
-  replicas: {{ .Values.controllerManager.replicas }}
+  replicas: 1
   selector:
     matchLabels:
       control-plane: controller-manager
@@ -33,47 +36,27 @@ spec:
       annotations:
         kubectl.kubernetes.io/default-container: manager
     spec:
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: kubernetes.io/arch
-                operator: In
-                values:
-                - amd64
-                - arm64
-                - ppc64le
-                - s390x
-              - key: kubernetes.io/os
-                operator: In
-                values:
-                - linux
       containers:
       - name: prometheus
-        image: prom/prometheus
+        image: {{ .Values.global.imageRegistry }}/{{ .Values.prometheus.repository }}:{{ .Values.prometheus.tag }}
         ports:
         - name: prometheus
           containerPort: 9090
         resources:
-          limits:
-            memory: "1Gi"
-            cpu: "1000m"
           requests:
             memory: 50M
             cpu: "50m"
         volumeMounts:
         - mountPath: /etc/prometheus
           name: prometheus
+        - mountPath: /prometheus
+          name: prometheus-storage
       - name: grafana
-        image: grafana/grafana:latest
+        image: {{ .Values.global.imageRegistry }}/{{ .Values.grafana.repository }}:{{ .Values.grafana.tag }}
         ports:
         - name: grafana
           containerPort: 3000
         resources:
-          limits:
-            memory: "1Gi"
-            cpu: "1000m"
           requests:
             memory: 50M
             cpu: "50m"
@@ -90,15 +73,20 @@ spec:
         - --health-probe-bind-address=:8081
         - --metrics-bind-address=0.0.0.0:8080
         - --leader-elect
+        {{- if not .Values.global.inClusterMode }}
         - --leader-election-namespace={{ .Release.Namespace }}
+        {{- end }}
         - --webhook-cert-directory=/etc/certs
+        {{- if not .Values.global.inClusterMode }}
+        - --kubeconfig=/etc/kubeconfig/config
+        {{- end }}
         command:
-        - /usr/bin/manager
+        - /manager
         name: manager
         env:
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: {{ quote .Values.kubernetesClusterDomain }}
-        image: {{ .Values.controllerManager.manager.image.repository }}:{{ .Values.controllerManager.manager.image.tag }}
+        image: {{ .Values.global.imageRegistry }}/{{ .Values.controllerManager.repository }}:{{ .Values.controllerManager.tag }}
         livenessProbe:
           httpGet:
             path: /healthz
@@ -112,17 +100,23 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 10
         resources:
-          limits:
-            memory: "1Gi"
-            cpu: "1000m"
           requests:
             memory: 50M
             cpu: "50m"
         volumeMounts:
         - mountPath: /etc/certs
           name: certs
+        {{- if not .Values.global.inClusterMode }}
+        - mountPath: /etc/kubeconfig
+          name: kubeconfig
+        {{- end }}
+      {{- if .Values.global.inClusterMode }}
       serviceAccountName: {{ include "kube-stack.fullname" . }}-controller-manager
-      terminationGracePeriodSeconds: 10
+      {{- end }}
+      {{- with .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       volumes:
       - name: grafana-storage
         emptyDir: {}
@@ -142,6 +136,16 @@ spec:
         configMap:
           defaultMode: 420
           name: {{ include "kube-stack.fullname" . }}-prometheus
+      - name: prometheus-storage
+        emptyDir: {}
       - name: certs
         secret:
           secretName: {{ include "kube-stack.fullname" . }}-certs
+      {{- if not .Values.global.inClusterMode }}
+      - name: kubeconfig
+        secret:
+          secretName: {{ .Values.global.kubeConfigSecretName }}
+          items:
+          - key: {{ .Values.global.kubeConfigSecretKey }}
+            path: config
+      {{- end }}
