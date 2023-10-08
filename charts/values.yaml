@@ -1,6 +1,6 @@
 controllerManager:
   repository: weiyuanke/kube-stack
-  tag: "v0.1.1"
+  tag: "v0.1.2"
 grafana:
   repository: grafana/grafana
   tag: "9.5.12"
