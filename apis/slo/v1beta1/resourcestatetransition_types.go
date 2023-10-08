@@ -54,30 +54,33 @@ type Transition struct {
 	Target string   `json:"target"`
 	Event  string   `json:"event"`
 	// +optional
-	// +kubebuilder:default:=false
-	Final bool `json:"final"`
+	NoMetric bool `json:"noMetric,omitempty"`
 }
 
 // Event resource event
 type Event struct {
 	// +required
 	Name string `json:"name"`
-
 	// +required
 	Requirements []Requirement `json:"requirements"`
 }
 
+type TimerConfig struct {
+	EventName      string `json:"eventName"`
+	TimerInSeconds int    `json:"timerInSeconds"`
+}
+
 // ResourceStateTransitionSpec defines the desired state of ResourceStateTransition
 type ResourceStateTransitionSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
 	// Selector restricts resource types that this StateTransition config applies to.
 	Selector ResourceSelector `json:"selector"`
 
 	Transitions []Transition `json:"transitions"`
 
 	Events []Event `json:"events"`
+
+	// +optional
+	Timer *TimerConfig `json:"timer,omitempty"`
 }
 
 // ResourceStateTransitionStatus defines the observed state of ResourceStateTransition

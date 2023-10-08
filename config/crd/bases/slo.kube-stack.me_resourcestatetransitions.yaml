@@ -92,14 +92,23 @@ spec:
                 - apiVersion
                 - kind
                 type: object
+              timer:
+                properties:
+                  eventName:
+                    type: string
+                  timerInSeconds:
+                    type: integer
+                required:
+                - eventName
+                - timerInSeconds
+                type: object
               transitions:
                 items:
                   description: Transition state transition
                   properties:
                     event:
                       type: string
-                    final:
-                      default: false
+                    noMetric:
                       type: boolean
                     source:
                       items:

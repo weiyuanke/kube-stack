@@ -19,6 +19,8 @@ import (
 
 const (
 	beginState       = "BeginState"
+	deletedState     = "DeletedState"
+	deletedEvent     = "DeletedEvent"
 	resourceStateKey = "ResourceStateKey"
 )
 
@@ -62,10 +64,10 @@ func NewResourceState(ctx context.Context, name types.NamespacedName, config *sl
 	}
 	ps.obj = obj
 
-	stateMap := make(map[string]bool, 0)
 	allStates := make([]string, 0)
+	noMetricMap := make(map[string]bool, 0)
 	for _, tran := range config.Spec.Transitions {
-		stateMap[tran.Target] = tran.Final
+		noMetricMap[tran.Target] = tran.NoMetric
 		allStates = append(allStates, tran.Target)
 	}
 
@@ -86,16 +88,25 @@ func NewResourceState(ctx context.Context, name types.NamespacedName, config *sl
 			Dst:  tran.Target,
 		})
 	}
+	// add default deletedEvent/deletedState
+	events = append(events, fsm.EventDesc{
+		Name: deletedEvent,
+		Src:  allStates,
+		Dst:  deletedState,
+	})
 
 	enterStateFunc := func(e *fsm.Event) {
 		metaVal, _ := e.FSM.Metadata(resourceStateKey)
 		rs := metaVal.(*ResourceState)
 		tranName := rs.resourceStateTransition.Name
-		enterStateCounter.WithLabelValues(tranName, e.Dst).Inc()
+
+		if !noMetricMap[e.Dst] {
+			enterStateCounter.WithLabelValues(tranName, e.Dst).Inc()
+		}
 		currentStateNum.WithLabelValues(tranName, e.Dst).Inc()
 		currentStateNum.WithLabelValues(tranName, e.Src).Dec()
 
-		if stateMap[e.Dst] && !rs.Stopped {
+		if e.Dst == deletedState && !rs.Stopped {
 			rs.Stopped = true
 			close(rs.stopCh)
 		}
@@ -106,6 +117,23 @@ func NewResourceState(ctx context.Context, name types.NamespacedName, config *sl
 	ps.FSM = f
 
 	return ps, nil
+}
+
+// StartTimer start dispatch timer event
+func (rs *ResourceState) StartTimer() {
+	if rs.resourceStateTransition.Spec.Timer != nil {
+		ticker := time.NewTicker(time.Second * time.Duration(rs.resourceStateTransition.Spec.Timer.TimerInSeconds))
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				rs.FSM.Event(rs.resourceStateTransition.Spec.Timer.EventName)
+				return
+			case <-rs.stopCh:
+				return
+			}
+		}
+	}
 }
 
 // StartDispatching dispatch event
@@ -139,6 +167,10 @@ func (rs *ResourceState) StopDispatching() {
 }
 
 func (rs *ResourceState) parseEvents(old, new *unstructured.Unstructured) ([]string, error) {
+	if new == nil {
+		return []string{deletedEvent}, nil
+	}
+
 	oldBytes, err := json.Marshal(old)
 	if err != nil {
 		return nil, err
@@ -171,7 +203,7 @@ func (rs *ResourceState) parseEvents(old, new *unstructured.Unstructured) ([]str
 			result = append(result, event.Name)
 		}
 	}
-	log.FromContext(rs.ctx).Info("diff: "+string(diff), "events", result, "namespacedName", rs.NamespacedName, "gvk", rs.gvk)
+	//log.FromContext(rs.ctx).Info("diff: "+string(diff), "events", result, "namespacedName", rs.NamespacedName, "gvk", rs.gvk)
 
 	return result, nil
 }

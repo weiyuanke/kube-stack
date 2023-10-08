@@ -89,6 +89,7 @@ func newResourceReconciler(ctx context.Context, clt client.Client, dynamic dynam
 		for {
 			select {
 			case <-ticker.C:
+				// cleanup stopped ResourceState
 				for _, v := range resourceReconciler.resourceMap.List() {
 					if v.(*ResourceState).Stopped {
 						resourceReconciler.resourceMap.Delete(string(v.(*ResourceState).Resource.GetUID()))
@@ -219,6 +220,7 @@ func (r *resourceReconciler) Reconcile(e event) error {
 			}
 			r.resourceMap.Add(string(e.object.GetUID()), rs)
 			go rs.StartDispatching()
+			go rs.StartTimer()
 			v = rs
 		}
 		v.(*ResourceState).EnqueueEvent(e.object)
