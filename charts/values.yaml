@@ -13,4 +13,5 @@ global:
   kubeConfigSecretName: ""
   kubeConfigSecretKey: ""
   nodeSelector: {}
+tlsCertsSecretName: ""
 kubernetesClusterDomain: cluster.local

@@ -73,7 +73,7 @@ spec:
         - --health-probe-bind-address=:8081
         - --metrics-bind-address=0.0.0.0:8080
         - --leader-elect
-        {{- if not .Values.global.inClusterMode }}
+        {{- if .Values.global.inClusterMode }}
         - --leader-election-namespace={{ .Release.Namespace }}
         {{- end }}
         - --webhook-cert-directory=/etc/certs
@@ -140,7 +140,11 @@ spec:
         emptyDir: {}
       - name: certs
         secret:
+          {{- if not .Values.tlsCertsSecretName }}
           secretName: {{ include "kube-stack.fullname" . }}-certs
+          {{- else}}
+          secretName: {{ .Values.tlsCertsSecretName }}
+          {{- end }}
       {{- if not .Values.global.inClusterMode }}
       - name: kubeconfig
         secret:
