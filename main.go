@@ -29,6 +29,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/syndtr/goleveldb/leveldb"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
@@ -48,6 +49,7 @@ import (
 	podmarkercontrollers "kube-stack.me/controllers/podmarker"
 	slocontrollers "kube-stack.me/controllers/slo"
 	"kube-stack.me/pkg/apiserverslo"
+	"kube-stack.me/pkg/debugapi"
 	podwebhook "kube-stack.me/webhooks/pods"
 	//+kubebuilder:scaffold:imports
 )
@@ -75,6 +77,8 @@ func main() {
 	var webhookCertDir string
 	var probeAddr string
 	var sloMod bool
+	var staticFileDirector string
+	var dbPath string
 
 	flag.BoolVar(&sloMod, "slo-mode", false, "slo mode")
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
@@ -84,6 +88,9 @@ func main() {
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.StringVar(&leaderElectionNamespace, "leader-election-namespace", "kube-system", "leader election namespace")
 	flag.StringVar(&webhookCertDir, "webhook-cert-directory", ".", "webhook cert directory: tls.crt/tls.key")
+	flag.StringVar(&staticFileDirector, "static-file-dir", ".", "root directory for static files")
+	flag.StringVar(&dbPath, "db-path", ".", "path for leveldb")
+
 	opts := zap.Options{
 		Development: true,
 	}
@@ -112,6 +119,15 @@ func main() {
 		http.Handle("/metrics", promhttp.Handler())
 		log.Fatal(http.ListenAndServe(metricsAddr, nil))
 	}
+
+	// initialize leveldb
+	dataBase, err := leveldb.OpenFile(dbPath, nil)
+	if err != nil {
+		setupLog.Error(err, "unable to open leveldb")
+		os.Exit(1)
+	}
+
+	defer dataBase.Close()
 
 	mgr, err := ctrl.NewManager(config, ctrl.Options{
 		Scheme:                  scheme,
@@ -203,6 +219,12 @@ func main() {
 			Handler: &podwebhook.PodValidate{Client: mgr.GetClient(), ClientSet: clientset},
 		},
 	)
+
+	// registe static file server
+	hookServer.Register("/", http.FileServer(http.Dir(staticFileDirector)))
+
+	// registe debug api
+	debugapi.RegisteToServer(hookServer)
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {

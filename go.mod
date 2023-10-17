@@ -5,10 +5,10 @@ go 1.19
 require (
 	github.com/go-logr/logr v1.2.3
 	github.com/looplab/fsm v0.3.0
-	github.com/oliveagle/jsonpath v0.0.0-20180606110733-2e52cf6e6852
 	github.com/onsi/ginkgo/v2 v2.1.4
 	github.com/onsi/gomega v1.19.0
 	github.com/prometheus/client_golang v1.12.2
+	github.com/syndtr/goleveldb v1.0.0
 	github.com/tidwall/gjson v1.14.4
 	k8s.io/api v0.25.0
 	k8s.io/apimachinery v0.25.0
@@ -46,6 +46,7 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.2.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db // indirect
 	github.com/google/gnostic v0.5.7-v3refs // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
