@@ -1,0 +1,12 @@
+apiVersion: slo.kube-stack.me/v1beta1
+kind: WatchSLO
+metadata:
+  labels:
+    app.kubernetes.io/name: watchslo
+    app.kubernetes.io/instance: watchslo-sample
+    app.kubernetes.io/part-of: kube-stack
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: kube-stack
+  name: watchslo-sample
+spec:
+  # TODO(user): Add fields here

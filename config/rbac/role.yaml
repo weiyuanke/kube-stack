@@ -118,3 +118,29 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - slo.kube-stack.me
+  resources:
+  - watchslos
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - slo.kube-stack.me
+  resources:
+  - watchslos/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - slo.kube-stack.me
+  resources:
+  - watchslos/status
+  verbs:
+  - get
+  - patch
+  - update

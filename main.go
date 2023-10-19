@@ -18,7 +18,6 @@ package main
 
 import (
 	"flag"
-	"log"
 	"net/http"
 	"os"
 	"time"
@@ -28,8 +27,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/syndtr/goleveldb/leveldb"
+	//"github.com/syndtr/goleveldb/leveldb"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
@@ -48,7 +46,6 @@ import (
 	podlimitercontrollers "kube-stack.me/controllers/podlimiter"
 	podmarkercontrollers "kube-stack.me/controllers/podmarker"
 	slocontrollers "kube-stack.me/controllers/slo"
-	"kube-stack.me/pkg/apiserverslo"
 	"kube-stack.me/pkg/debugapi"
 	podwebhook "kube-stack.me/webhooks/pods"
 	//+kubebuilder:scaffold:imports
@@ -76,11 +73,9 @@ func main() {
 	var leaderElectionNamespace string
 	var webhookCertDir string
 	var probeAddr string
-	var sloMod bool
 	var staticFileDirector string
 	var dbPath string
 
-	flag.BoolVar(&sloMod, "slo-mode", false, "slo mode")
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
@@ -95,7 +90,6 @@ func main() {
 		Development: true,
 	}
 	opts.BindFlags(flag.CommandLine)
-	apiserverslo.BindFlags(flag.CommandLine)
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
@@ -114,20 +108,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	if sloMod {
-		apiserverslo.StartWatchSLO(config)
-		http.Handle("/metrics", promhttp.Handler())
-		log.Fatal(http.ListenAndServe(metricsAddr, nil))
-	}
-
 	// initialize leveldb
-	dataBase, err := leveldb.OpenFile(dbPath, nil)
-	if err != nil {
-		setupLog.Error(err, "unable to open leveldb")
-		os.Exit(1)
-	}
+	// dataBase, err := leveldb.OpenFile(dbPath, nil)
+	// if err != nil {
+	// 	setupLog.Error(err, "unable to open leveldb")
+	// 	os.Exit(1)
+	// }
 
-	defer dataBase.Close()
+	// defer dataBase.Close()
 
 	mgr, err := ctrl.NewManager(config, ctrl.Options{
 		Scheme:                  scheme,
@@ -188,6 +176,14 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "ResourceStateTransition")
 		os.Exit(1)
 	}
+	if err = (&slocontrollers.WatchSLOReconciler{
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		DynamicClient: dynamicClient,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "WatchSLO")
+		os.Exit(1)
+	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
@@ -198,9 +194,6 @@ func main() {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
-
-	setupLog.Info("starting Pod WatchDealy monitoring")
-	apiserverslo.StartWatchSLO(config)
 
 	// Setup webhooks
 	setupLog.Info("setting up webhook server")

@@ -1,0 +1,27 @@
+# permissions for end users to view watchslos.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: watchslo-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: kube-stack
+    app.kubernetes.io/part-of: kube-stack
+    app.kubernetes.io/managed-by: kustomize
+  name: watchslo-viewer-role
+rules:
+- apiGroups:
+  - slo.kube-stack.me
+  resources:
+  - watchslos
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - slo.kube-stack.me
+  resources:
+  - watchslos/status
+  verbs:
+  - get

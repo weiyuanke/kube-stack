@@ -1,5 +1,54 @@
 ---
 apiVersion: slo.kube-stack.me/v1beta1
+kind: WatchSLO
+metadata:
+  labels:
+    app.kubernetes.io/name: watchslo
+    app.kubernetes.io/instance: watchslo-sample
+    app.kubernetes.io/part-of: kube-stack
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: kube-stack
+  name: watchslo-config
+spec:
+  configs:
+  - selector:
+      apiVersion: v1
+      kind: Pod
+    targetResource: |
+      apiVersion: v1
+      kind: Pod
+      metadata:
+        name: kube-stack-target-pod
+        namespace: kube-system
+        labels:
+          meta.k8s.alipay.com/zone: xxxxx
+          sigma.ali/app-name: xxxx
+          sigma.ali/instance-group: xxxxx
+          sigma.ali/deploy-unit: xxxxx
+          sigma.ali/site: xxxx
+          meta.k8s.alipay.com/app-env: DEV
+          app: nginx
+      spec:
+        containers:
+        - name: main
+          image: docker.io/xxxxxx/nginx:1.23.3
+          resources:
+            requests:
+              cpu: 2
+              memory: 2Gi
+              ephemeral-storage: 3Gi
+            limits:
+              cpu: 2
+              memory: 2Gi
+              ephemeral-storage: 3Gi
+  - selector:
+      apiVersion: v1
+      kind: Service
+  - selector:
+      apiVersion: v1
+      kind: PersistentVolumeClaim
+---
+apiVersion: slo.kube-stack.me/v1beta1
 kind: ResourceStateTransition
 metadata:
   name: slo-pod-create
@@ -9,7 +58,7 @@ spec:
     kind: Pod
   timer:
     eventName: timerEvent100s
-    timerInSeconds: 100
+    timerInSeconds: 600
   events:
   - name: Created
     requirements:
