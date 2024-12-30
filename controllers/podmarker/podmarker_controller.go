@@ -97,7 +97,7 @@ func (r *Reconciler) processPodMarker(ctx context.Context, pm *podmarkerv1.PodMa
 			podList = append(podList, &pods.Items[i])
 		}
 		sort.SliceStable(podList, func(i, j int) bool {
-			return podList[i].CreationTimestamp.Time.Before(podList[i].CreationTimestamp.Time)
+			return podList[i].CreationTimestamp.Time.Before(podList[j].CreationTimestamp.Time)
 		})
 	}
 	llog.Info("processPodMarker", "podmarker name", pm.Name, "number of pods", len(podList))
