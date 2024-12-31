@@ -30,44 +30,42 @@ func CloseDB(path string) {
 	}
 }
 
-func Get(ldb *leveldb.DB, key string) ([]byte, error) {
+func Get(table, key string) (string, error) {
+	key = keyStr(table, key)
 	data, err := ldb.Get([]byte(key), nil)
-
 	if err != nil && err != leveldb_errors.ErrNotFound {
-		return nil, err
+		return "", err
 	}
 
 	if data == nil {
-		return nil, nil
+		return "", nil
 	}
 
 	var cache CacheType
 	err = json.Unmarshal(data, &cache)
-
 	if err != nil {
-		return nil, nil
+		return "", nil
 	}
 
 	secs := time.Now().Unix()
-
 	if cache.Expires > 0 && cache.Expires <= secs {
 		ldb.Delete([]byte(key), nil)
-		return nil, nil
+		return "", nil
 	}
 
-	return cache.Data, nil
+	return string(cache.Data), nil
 }
 
-func Set(ldb *leveldb.DB, key string, value string, expires int64) error {
+func Set(table, key, value string) error {
+	key = keyStr(table, key)
 	cache := CacheType{Data: []byte(value), Created: time.Now().Unix(), Expires: 0}
-
-	if expires > 0 {
-		cache.Expires = cache.Created + expires
-	}
-
 	json_string, err := json.Marshal(cache)
+	if err != nil {
+		return err
+	}
+	return ldb.Put([]byte(key), []byte(json_string), nil)
+}
 
-	err = ldb.Put([]byte(key), []byte(json_string), nil)
-
-	return err
+func keyStr(table, key string) string {
+	return table + "__" + key
 }
