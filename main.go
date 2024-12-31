@@ -42,6 +42,7 @@ import (
 	podmarkerv1 "kube-stack.me/apis/podmarker/v1"
 	slov1beta1 "kube-stack.me/apis/slo/v1beta1"
 	centralprobecontrollers "kube-stack.me/controllers/centralprobe"
+	corecontrollers "kube-stack.me/controllers/core"
 	podlimitercontrollers "kube-stack.me/controllers/podlimiter"
 	podmarkercontrollers "kube-stack.me/controllers/podmarker"
 	slocontrollers "kube-stack.me/controllers/slo"
@@ -180,6 +181,27 @@ func main() {
 		DynamicClient: dynamicClient,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "WatchSLO")
+		os.Exit(1)
+	}
+	if err = (&corecontrollers.PodReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Pod")
+		os.Exit(1)
+	}
+	if err = (&corecontrollers.EventReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Event")
+		os.Exit(1)
+	}
+	if err = (&corecontrollers.NodeReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Node")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

@@ -54,20 +54,27 @@ const (
 )
 
 type processer interface {
-	Process() (string, error)
+	Process(r *http.Request) (string, error)
 }
 
 func handlerWrapper(p processer) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 
-		dataStr, err := p.Process()
+		jsonOption := r.URL.Query().Get("json")
+
+		dataStr, err := p.Process(r)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))
 		}
 
-		respBody := []byte(strings.Replace(tpl, "%s", strings.TrimSpace(dataStr), -1))
+		var respBody []byte
+		if jsonOption == "true" {
+			respBody = []byte(dataStr)
+		} else {
+			respBody = []byte(strings.Replace(tpl, "%s", strings.TrimSpace(dataStr), -1))
+		}
 
 		w.Header().Set("Content-Type", "text/html;charset=UTF-8")
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -84,5 +91,8 @@ func handlerWrapper(p processer) http.HandlerFunc {
 
 // RegisteToServer Registe handler for debug api
 func RegisteToServer(server *webhook.Server) {
-	server.Register("/debugpod", handlerWrapper(&podProcessor{}))
+	server.Register("/podyaml", handlerWrapper(&podYamlProcessor{}))
+	server.Register("/nodeyaml", handlerWrapper(&nodeYamlProcessor{}))
+	server.Register("/eventyaml", handlerWrapper(&eventYamlProcessor{}))
+	server.Register("/debugpod", handlerWrapper(&debugPodProcessor{}))
 }

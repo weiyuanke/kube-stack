@@ -59,4 +59,14 @@ resources:
   kind: WatchSLO
   path: kube-stack.me/apis/slo/v1beta1
   version: v1beta1
+- controller: true
+  group: core
+  kind: Event
+  path: k8s.io/api/core/v1
+  version: v1
+- controller: true
+  group: core
+  kind: Node
+  path: k8s.io/api/core/v1
+  version: v1
 version: "3"
