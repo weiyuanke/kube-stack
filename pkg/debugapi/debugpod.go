@@ -1,9 +1,13 @@
 package debugapi
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
+	"os"
+	"strings"
 
+	"github.com/northes/go-moonshot"
 	corev1 "k8s.io/api/core/v1"
 	corecontroller "kube-stack.me/controllers/core"
 	"kube-stack.me/pkg/utils"
@@ -12,7 +16,15 @@ import (
 
 var (
 	llog = ctrl.Log.WithName("debugPodProcessor")
+	mClient *moonshot.Client
 )
+
+func init() {
+	key, _ := os.LookupEnv("MOONSHOT_KEY")
+	if cli, err := moonshot.NewClient(key); err == nil {
+		mClient = cli
+	}
+}
 
 type debugPodProcessor struct {
 }
@@ -86,6 +98,30 @@ func (p *debugPodProcessor) Process(r *http.Request) (string, error) {
 			"pod events":  events,
 			"node yaml":   node,
 			"node events": nodeEvents,
+		}
+
+		// diagnose with llm
+		builder := moonshot.NewChatCompletionsBuilder()
+		systemPromt := `
+			你是一个精通kubernetes的技术专家，负责帮用户排查各种各样的问题，比如Pod无法启动、创建Pod报错等;
+			你的任务是帮助用户排查提交过来的各种问题，并且精准定位问题；
+
+		`
+		builder.AddSystemContent(systemPromt)
+		builder.SetTemperature(0.3)
+		bytes, _ := json.Marshal(response)
+		preMsg := `
+			基于以下提供的pod yaml, 以及对应的node yaml, pod events, node events，诊断该Pod.
+			诊断结果尽可能简洁准确
+		`
+		builder.AddUserContent(preMsg + string(bytes))
+		if resp, err := mClient.Chat().Completions(context.TODO(), builder.ToRequest()); err != nil {
+			llog.Error(err, "llm failed", "resp", resp)
+		} else {
+			if len(resp.Choices) != 0 {
+				choice := resp.Choices[0]
+				response["llm result"] = strings.Split(choice.Message.Content, "\n")
+			}
 		}
 
 		data, err := json.Marshal(response)
