@@ -84,7 +84,7 @@ func main() {
 	flag.StringVar(&leaderElectionNamespace, "leader-election-namespace", "kube-system", "leader election namespace")
 	flag.StringVar(&webhookCertDir, "webhook-cert-directory", ".", "webhook cert directory: tls.crt/tls.key")
 	flag.StringVar(&staticFileDirector, "static-file-dir", ".", "root directory for static files")
-	flag.StringVar(&dbPath, "db-path", ".", "path for leveldb")
+	flag.StringVar(&dbPath, "db-path", "leveldb_data", "path for leveldb")
 
 	opts := zap.Options{
 		Development: true,
