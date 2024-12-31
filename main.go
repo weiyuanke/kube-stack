@@ -27,7 +27,6 @@ import (
 	"k8s.io/client-go/dynamic"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
-	//"github.com/syndtr/goleveldb/leveldb"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
@@ -47,6 +46,7 @@ import (
 	podmarkercontrollers "kube-stack.me/controllers/podmarker"
 	slocontrollers "kube-stack.me/controllers/slo"
 	"kube-stack.me/pkg/debugapi"
+	"kube-stack.me/pkg/utils"
 	podwebhook "kube-stack.me/webhooks/pods"
 	//+kubebuilder:scaffold:imports
 )
@@ -109,13 +109,11 @@ func main() {
 	}
 
 	// initialize leveldb
-	// dataBase, err := leveldb.OpenFile(dbPath, nil)
-	// if err != nil {
-	// 	setupLog.Error(err, "unable to open leveldb")
-	// 	os.Exit(1)
-	// }
-
-	// defer dataBase.Close()
+	if err := utils.InitDB(dbPath); err != nil {
+		setupLog.Error(err, "unable to open leveldb")
+		os.Exit(1)
+	}
+	defer utils.CloseDB(dbPath)
 
 	mgr, err := ctrl.NewManager(config, ctrl.Options{
 		Scheme:                  scheme,

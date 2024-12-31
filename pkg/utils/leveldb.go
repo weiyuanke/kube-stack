@@ -10,10 +10,24 @@ import (
 	leveldb_errors "github.com/syndtr/goleveldb/leveldb/errors"
 )
 
+var ldb *leveldb.DB
+
 type CacheType struct {
 	Data    []byte `json:"data"`
 	Created int64  `json:"created"`
 	Expires int64  `json:"expires"`
+}
+
+func InitDB(path string) error {
+	var err error = nil
+	ldb, err = leveldb.OpenFile(path, nil)
+	return err
+}
+
+func CloseDB(path string) {
+	if ldb != nil {
+		ldb.Close()
+	}
 }
 
 func Get(ldb *leveldb.DB, key string) ([]byte, error) {
