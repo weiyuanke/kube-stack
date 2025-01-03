@@ -28,3 +28,4 @@ leveldb_data
 *.swo
 *~
 .history
+.DS_Store
