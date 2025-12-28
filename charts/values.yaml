@@ -8,7 +8,7 @@ prometheus:
   repository: bitnami/prometheus
   tag: "2.47.1"
 global:
-  imageRegistry: docker.io
+  imageRegistry: docker.m.daocloud.io # docker.io
   inClusterMode: true
   kubeConfigSecretName: ""
   kubeConfigSecretKey: ""
