@@ -123,7 +123,7 @@ rules:
 - apiGroups:
   - slo.kube-stack.me
   resources:
-  - resourcestatetransitions
+  - '*'
   verbs:
   - create
   - delete
